@@ -466,3 +466,78 @@ export async function imagesToPdf(files: File[], opts?: { fitToA4?: boolean }): 
   }
   return doc.save()
 }
+
+/**
+ * Stamp the same diagonal (bottom-left → top-right) text watermark used on
+ * PDFs onto a JPG/PNG/GIF image. Output keeps PNG for PNG input (preserves
+ * transparency), JPEG for everything else; GIF input is flattened to its
+ * first frame and exported as PNG since canvas has no animated-GIF encoder.
+ */
+export async function addImageWatermark(
+  file: File,
+  text: string,
+  opts?: { opacity?: number; size?: number; colorGray?: number; quality?: number }
+): Promise<{ blob: Blob; note?: string }> {
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    bitmap = await createImageBitmap(file)
+  }
+  const { width, height } = bitmap
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')!
+
+  const isPng = file.type === 'image/png'
+  const isGif = file.type === 'image/gif'
+  const outputsPng = isPng || isGif
+  if (!outputsPng) {
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, width, height)
+  }
+  ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
+
+  const opacity = opts?.opacity ?? 0.22
+  const requestedSize = opts?.size ?? 48
+  const gray = opts?.colorGray ?? 0.5
+
+  // atan2(height, width) is the bottom-left→top-right diagonal angle in
+  // normal (y-up) math terms, same as the PDF version. Canvas is y-down, so
+  // rotating by the *negative* of that angle produces the same visual
+  // up-and-to-the-right direction on screen.
+  const theta = Math.atan2(height, width)
+
+  ctx.font = `bold ${requestedSize}px Arial, Helvetica, sans-serif`
+  let size = requestedSize
+  let textWidth = ctx.measureText(text).width
+  const margin = 0.92
+  const cosT = Math.cos(theta)
+  const sinT = Math.sin(theta)
+  const maxHalfWidth = margin * Math.min(width / (2 * Math.max(cosT, 1e-6)), height / (2 * Math.max(sinT, 1e-6)))
+  if (textWidth / 2 > maxHalfWidth) {
+    size = Math.max(6, size * (maxHalfWidth / (textWidth / 2)))
+    ctx.font = `bold ${size}px Arial, Helvetica, sans-serif`
+    textWidth = ctx.measureText(text).width
+  }
+
+  ctx.save()
+  ctx.translate(width / 2, height / 2)
+  ctx.rotate(-theta)
+  ctx.globalAlpha = opacity
+  const g = Math.round(gray * 255)
+  ctx.fillStyle = `rgb(${g}, ${g}, ${g})`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, 0, 0)
+  ctx.restore()
+
+  const outMime = outputsPng ? 'image/png' : 'image/jpeg'
+  const quality = opts?.quality ?? 0.92
+  const blob: Blob = await new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), outMime, outMime === 'image/jpeg' ? quality : undefined)
+  )
+  return { blob, note: isGif ? 'GIF was exported as a PNG (first frame only) — animated GIFs can’t be watermarked frame-by-frame in the browser.' : undefined }
+}
