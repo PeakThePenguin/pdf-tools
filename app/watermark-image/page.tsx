@@ -81,7 +81,7 @@ export default function WatermarkImagePage() {
 
             <div>
               <p className="text-[11px] text-gray-500 mb-1">Size: {size}pt</p>
-              <input type="range" min={20} max={90} step={2} value={size} onChange={(e) => setSize(Number(e.target.value))} className="w-full" />
+              <input type="range" min={20} max={128} step={2} value={size} onChange={(e) => setSize(Number(e.target.value))} className="w-full" />
             </div>
 
             <button
