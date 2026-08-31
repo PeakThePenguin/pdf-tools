@@ -34,7 +34,7 @@ export default function PdfToolsPage() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-header-title">PDF TOOLS</div>
+        <div className="app-header-title">PC-TEAM 4 PDF TOOLS</div>
         <div className="app-header-subtitle">Runs entirely in your browser</div>
       </header>
 
