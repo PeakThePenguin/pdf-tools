@@ -61,7 +61,7 @@ export default function CompressPdfPage() {
           </div>
         )}
 
-        <p className="text-[11px] text-gray-500">
+        <p className="text-[13px] text-gray-500">
           Recompresses the JPEG photos embedded in the PDF (the usual cause of large files — scans, screenshots).
           Text and line art are untouched. PDFs made up of vector text with no photos won&rsquo;t shrink much.
         </p>
@@ -71,18 +71,18 @@ export default function CompressPdfPage() {
         {file && (
           <>
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Quality: {Math.round(quality * 100)}%</p>
+              <p className="text-[13px] text-gray-500 mb-1">Quality: {Math.round(quality * 100)}%</p>
               <input type="range" min={0.3} max={0.9} step={0.05} value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full" />
             </div>
 
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Max image resolution</p>
+              <p className="text-[13px] text-gray-500 mb-1">Max image resolution</p>
               <div className="grid grid-cols-4 gap-2">
                 {[{ label: 'Original', v: undefined }, { label: '2000px', v: 2000 }, { label: '1600px', v: 1600 }, { label: '1200px', v: 1200 }].map((opt) => (
                   <button
                     key={opt.label}
                     onClick={() => setMaxDimension(opt.v)}
-                    className="py-2 font-bold text-[10px]"
+                    className="py-2 font-bold text-[12px]"
                     style={{
                       border: `2px solid ${maxDimension === opt.v ? 'var(--purple)' : '#e5e7eb'}`,
                       color: maxDimension === opt.v ? 'var(--purple)' : '#666',

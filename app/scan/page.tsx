@@ -98,7 +98,7 @@ export default function ScanPage() {
             className="py-4 flex flex-col items-center gap-1 font-bold text-xs text-white"
             style={{ background: 'var(--purple)', borderRadius: 4 }}
           >
-            <span style={{ fontSize: 18 }}>📷</span>
+            <span style={{ fontSize: 22 }}>📷</span>
             Take photo
           </button>
           <button
@@ -106,7 +106,7 @@ export default function ScanPage() {
             className="py-4 flex flex-col items-center gap-1 font-bold text-xs"
             style={{ background: '#fff', color: 'var(--purple)', border: '1px solid var(--purple)', borderRadius: 4 }}
           >
-            <span style={{ fontSize: 18 }}>🖼️</span>
+            <span style={{ fontSize: 22 }}>🖼️</span>
             Choose from gallery
           </button>
         </div>
@@ -117,7 +117,7 @@ export default function ScanPage() {
         {error && <p className="text-xs" style={{ color: '#dc2626' }}>{error}</p>}
 
         {files.length > 0 && (
-          <p className="text-[11px] text-gray-500">{files.length} page{files.length === 1 ? '' : 's'} captured — reorder with ← →</p>
+          <p className="text-[13px] text-gray-500">{files.length} page{files.length === 1 ? '' : 's'} captured — reorder with ← →</p>
         )}
 
         <ImagePickerGrid files={files} onChange={setFiles} />

@@ -88,18 +88,18 @@ export default function CompressImagesPage() {
         {files.length > 0 && (
           <>
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Quality: {Math.round(quality * 100)}% (PNGs stay lossless)</p>
+              <p className="text-[13px] text-gray-500 mb-1">Quality: {Math.round(quality * 100)}% (PNGs stay lossless)</p>
               <input type="range" min={0.3} max={0.95} step={0.05} value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full" />
             </div>
 
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Max dimension</p>
+              <p className="text-[13px] text-gray-500 mb-1">Max dimension</p>
               <div className="grid grid-cols-4 gap-2">
                 {[{ label: 'Original', v: undefined }, { label: '2000px', v: 2000 }, { label: '1600px', v: 1600 }, { label: '1200px', v: 1200 }].map((opt) => (
                   <button
                     key={opt.label}
                     onClick={() => setMaxDimension(opt.v)}
-                    className="py-2 font-bold text-[10px]"
+                    className="py-2 font-bold text-[12px]"
                     style={{
                       border: `2px solid ${maxDimension === opt.v ? 'var(--purple)' : '#e5e7eb'}`,
                       color: maxDimension === opt.v ? 'var(--purple)' : '#666',

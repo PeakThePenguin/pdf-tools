@@ -46,7 +46,7 @@ export default function NUpPage() {
 
         {file && (
           <>
-            <p className="text-[11px] text-gray-500">Pages per sheet</p>
+            <p className="text-[13px] text-gray-500">Pages per sheet</p>
             <div className="grid grid-cols-4 gap-2">
               {OPTIONS.map((opt) => (
                 <button

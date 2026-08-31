@@ -57,7 +57,7 @@ export default function RemovePagesPage() {
 
         {thumbs.length > 0 && (
           <>
-            <p className="text-[11px] text-gray-500">Tap pages to mark them for removal — {selected.size} selected</p>
+            <p className="text-[13px] text-gray-500">Tap pages to mark them for removal — {selected.size} selected</p>
             <div className="grid grid-cols-3 gap-2">
               {thumbs.map((t) => {
                 const isSel = selected.has(t.index)
@@ -69,7 +69,7 @@ export default function RemovePagesPage() {
                     style={{ aspectRatio: '3/4', borderColor: isSel ? '#dc2626' : '#e5e7eb', borderWidth: isSel ? 2 : 1 }}
                   >
                     <img src={t.dataUrl} alt={`Page ${t.index + 1}`} className="w-full h-full object-contain" style={{ opacity: isSel ? 0.35 : 1 }} />
-                    <span className="absolute bottom-0.5 left-0.5 text-[9px] font-bold text-white px-1 rounded" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                    <span className="absolute bottom-0.5 left-0.5 text-[11px] font-bold text-white px-1 rounded" style={{ background: 'rgba(0,0,0,0.55)' }}>
                       {t.index + 1}
                     </span>
                     {isSel && (

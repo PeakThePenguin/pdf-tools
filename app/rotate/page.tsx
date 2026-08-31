@@ -57,7 +57,7 @@ export default function RotatePage() {
                     background: angle === a ? '#f3e8ff' : '#fff',
                   }}
                 >
-                  <span style={{ fontSize: 18, transform: `rotate(${a}deg)`, display: 'inline-block' }}>↻</span>
+                  <span style={{ fontSize: 22, transform: `rotate(${a}deg)`, display: 'inline-block' }}>↻</span>
                   {a}°
                 </button>
               ))}

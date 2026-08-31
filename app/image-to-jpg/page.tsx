@@ -97,18 +97,18 @@ export default function ImageToJpgPage() {
         {files.length > 0 && (
           <>
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">JPG quality: {Math.round(quality * 100)}%</p>
+              <p className="text-[13px] text-gray-500 mb-1">JPG quality: {Math.round(quality * 100)}%</p>
               <input type="range" min={0.5} max={1} step={0.02} value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full" />
             </div>
 
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[13px] text-gray-400">
               GIFs convert their first frame only. PSDs use the flattened composite (no layers). RAW files use their embedded camera preview, not a full RAW develop.
             </p>
 
             {notes.length > 0 && (
               <div className="space-y-0.5">
                 {notes.map((n, i) => (
-                  <p key={i} className="text-[11px]" style={{ color: n.includes('failed') || n.includes(':') ? '#dc2626' : '#6b7280' }}>{n}</p>
+                  <p key={i} className="text-[13px]" style={{ color: n.includes('failed') || n.includes(':') ? '#dc2626' : '#6b7280' }}>{n}</p>
                 ))}
               </div>
             )}

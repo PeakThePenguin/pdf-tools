@@ -88,7 +88,7 @@ export default function SplitPage() {
               {busy ? 'Splitting…' : `Split all ${thumbs.length} pages into separate PDFs (.zip)`}
             </button>
 
-            <p className="text-[11px] text-gray-500">— or tap pages below to select which to extract —</p>
+            <p className="text-[13px] text-gray-500">— or tap pages below to select which to extract —</p>
 
             <div className="grid grid-cols-3 gap-2">
               {thumbs.map((t) => {
@@ -101,11 +101,11 @@ export default function SplitPage() {
                     style={{ aspectRatio: '3/4', borderColor: isSel ? 'var(--purple)' : '#e5e7eb', borderWidth: isSel ? 2 : 1 }}
                   >
                     <img src={t.dataUrl} alt={`Page ${t.index + 1}`} className="w-full h-full object-contain" />
-                    <span className="absolute bottom-0.5 left-0.5 text-[9px] font-bold text-white px-1 rounded" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                    <span className="absolute bottom-0.5 left-0.5 text-[11px] font-bold text-white px-1 rounded" style={{ background: 'rgba(0,0,0,0.55)' }}>
                       {t.index + 1}
                     </span>
                     {isSel && (
-                      <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white font-bold" style={{ background: 'var(--purple)' }}>
+                      <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[12px] text-white font-bold" style={{ background: 'var(--purple)' }}>
                         ✓
                       </span>
                     )}

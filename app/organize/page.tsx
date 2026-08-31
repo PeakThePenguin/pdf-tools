@@ -79,7 +79,7 @@ export default function OrganizePage() {
 
         {entries.length > 0 && (
           <>
-            <p className="text-[11px] text-gray-500">Drag to reorder · tap ↻ to rotate · tap ✕ to delete</p>
+            <p className="text-[13px] text-gray-500">Drag to reorder · tap ↻ to rotate · tap ✕ to delete</p>
             <div className="grid grid-cols-3 gap-2">
               {entries.map((e, i) => (
                 <div
@@ -97,12 +97,12 @@ export default function OrganizePage() {
                     className="w-full h-full object-contain"
                     style={{ transform: `rotate(${e.rotate}deg)` }}
                   />
-                  <span className="absolute bottom-0.5 left-0.5 text-[9px] font-bold text-white px-1 rounded" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                  <span className="absolute bottom-0.5 left-0.5 text-[11px] font-bold text-white px-1 rounded" style={{ background: 'rgba(0,0,0,0.55)' }}>
                     {i + 1}
                   </span>
                   <div className="absolute top-0.5 right-0.5 flex gap-0.5">
-                    <button onClick={() => rotateOne(i)} className="w-5 h-5 flex items-center justify-center text-[10px] rounded text-white" style={{ background: 'rgba(0,0,0,0.55)' }}>↻</button>
-                    <button onClick={() => deleteOne(i)} className="w-5 h-5 flex items-center justify-center text-[10px] rounded text-white" style={{ background: 'rgba(220,38,38,0.85)' }}>✕</button>
+                    <button onClick={() => rotateOne(i)} className="w-5 h-5 flex items-center justify-center text-[12px] rounded text-white" style={{ background: 'rgba(0,0,0,0.55)' }}>↻</button>
+                    <button onClick={() => deleteOne(i)} className="w-5 h-5 flex items-center justify-center text-[12px] rounded text-white" style={{ background: 'rgba(220,38,38,0.85)' }}>✕</button>
                   </div>
                 </div>
               ))}

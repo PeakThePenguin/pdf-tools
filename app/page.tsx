@@ -38,7 +38,7 @@ export default function PdfToolsPage() {
       <header className="app-header app-header--home">
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/thai-logo.png" alt="" width={44} height={44} className="flex-shrink-0" />
+          <img src="/thai-logo.png" alt="" width={53} height={53} className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="app-header-title">PC-TEAM 4 PDF TOOLS</div>
             <div className="app-header-subtitle">Runs entirely in your browser</div>
@@ -64,12 +64,12 @@ export default function PdfToolsPage() {
             >
               <div
                 className="flex items-center justify-center mb-2"
-                style={{ width: 34, height: 34, borderRadius: 8, background: `${tool.color}1a`, fontSize: 17 }}
+                style={{ width: 41, height: 41, borderRadius: 8, background: `${tool.color}1a`, fontSize: 20 }}
               >
                 <span>{tool.icon}</span>
               </div>
               <div className="text-xs font-bold text-gray-900 leading-tight">{tool.title}</div>
-              <div className="text-[10px] text-gray-500 mt-0.5 leading-snug">{tool.desc}</div>
+              <div className="text-[12px] text-gray-500 mt-0.5 leading-snug">{tool.desc}</div>
             </Link>
           ))}
         </div>

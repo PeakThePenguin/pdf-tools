@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Text/icon sizes across the site are 20% larger than Tailwind's defaults —
+   line-heights stay as unitless ratios, so they scale with the font size
+   automatically. */
+@theme {
+  --text-xs: 0.9rem;
+  --text-sm: 1.05rem;
+  --text-base: 1.2rem;
+  --text-lg: 1.35rem;
+  --text-xl: 1.5rem;
+}
+
 :root {
   --purple: #6B2D8B;
   --purple-dark: #4a1f60;
@@ -52,7 +63,7 @@ body {
 }
 .app-header-title {
   color: var(--gold);
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: 0.03em;
   line-height: 1.2;
@@ -62,7 +73,7 @@ body {
 }
 .app-header-subtitle {
   color: rgba(255,255,255,0.9);
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 1px;
 }
 
@@ -71,10 +82,10 @@ body {
   padding: 20px 18px 18px;
 }
 .app-header--home .app-header-title {
-  font-size: 19px;
+  font-size: 23px;
 }
 .app-header--home .app-header-subtitle {
-  font-size: 14px;
+  font-size: 17px;
   margin-top: 3px;
 }
 
@@ -85,7 +96,7 @@ body {
   border: 1px solid #bbb;
   background: white;
   padding: 7px 10px;
-  font-size: 13px;
+  font-size: 16px;
   color: #1a1a1a;
   outline: none;
   border-radius: 0;
@@ -104,7 +115,7 @@ body {
 }
 .field-label {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: #555;
   margin-bottom: 3px;
@@ -122,9 +133,9 @@ body {
 
 /* ── Loading spinner ──────────────────────────────── */
 .spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(107,45,139,0.2);
+  width: 38px;
+  height: 38px;
+  border: 4px solid rgba(107,45,139,0.2);
   border-top-color: var(--purple);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;

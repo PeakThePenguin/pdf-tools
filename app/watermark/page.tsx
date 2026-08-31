@@ -56,7 +56,7 @@ export default function WatermarkPage() {
                   <button
                     key={preset}
                     onClick={() => setText(preset)}
-                    className="text-[10px] font-semibold px-2 py-1"
+                    className="text-[12px] font-semibold px-2 py-1"
                     style={{
                       border: `1px solid ${text === preset ? 'var(--purple)' : '#e5e7eb'}`,
                       color: text === preset ? 'var(--purple)' : '#666',
@@ -71,12 +71,12 @@ export default function WatermarkPage() {
             </div>
 
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Opacity: {Math.round(opacity * 100)}%</p>
+              <p className="text-[13px] text-gray-500 mb-1">Opacity: {Math.round(opacity * 100)}%</p>
               <input type="range" min={0.05} max={0.6} step={0.01} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} className="w-full" />
             </div>
 
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Size: {size}pt</p>
+              <p className="text-[13px] text-gray-500 mb-1">Size: {size}pt</p>
               <input type="range" min={20} max={90} step={2} value={size} onChange={(e) => setSize(Number(e.target.value))} className="w-full" />
             </div>
 

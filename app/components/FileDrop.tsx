@@ -39,7 +39,7 @@ export default function FileDrop({
         padding: '32px 16px',
       }}
     >
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth={1.6}>
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth={1.6}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0L7 9m5-5l5 5M5 20h14" />
       </svg>
       <span className="text-xs font-semibold" style={{ color: 'var(--purple)' }}>{label}</span>

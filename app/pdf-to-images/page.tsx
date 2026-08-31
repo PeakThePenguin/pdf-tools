@@ -67,7 +67,7 @@ export default function PdfToImagesPage() {
         {file && (
           <>
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Format</p>
+              <p className="text-[13px] text-gray-500 mb-1">Format</p>
               <div className="grid grid-cols-2 gap-2">
                 {(['image/jpeg', 'image/png'] as const).map((f) => (
                   <button
@@ -88,7 +88,7 @@ export default function PdfToImagesPage() {
             </div>
 
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Quality: {scale === 1 ? 'Standard' : scale === 2 ? 'High' : 'Very high'}</p>
+              <p className="text-[13px] text-gray-500 mb-1">Quality: {scale === 1 ? 'Standard' : scale === 2 ? 'High' : 'Very high'}</p>
               <input type="range" min={1} max={3} step={1} value={scale} onChange={(e) => setScale(Number(e.target.value))} className="w-full" />
             </div>
 

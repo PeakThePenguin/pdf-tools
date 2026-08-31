@@ -52,7 +52,7 @@ export default function PageNumbersPage() {
         {file && (
           <>
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Position</p>
+              <p className="text-[13px] text-gray-500 mb-1">Position</p>
               <div className="grid grid-cols-3 gap-2">
                 {POSITIONS.map((p) => (
                   <button

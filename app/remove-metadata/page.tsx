@@ -39,7 +39,7 @@ export default function RemoveMetadataPage() {
           </div>
         )}
 
-        <p className="text-[11px] text-gray-500">Clears the title, author, subject, keywords, creator, and producer fields stored in the PDF.</p>
+        <p className="text-[13px] text-gray-500">Clears the title, author, subject, keywords, creator, and producer fields stored in the PDF.</p>
 
         {error && <p className="text-xs" style={{ color: '#dc2626' }}>{error}</p>}
 
