@@ -25,6 +25,7 @@ const TOOLS: Tool[] = [
   { href: '/scan', icon: '📷', title: 'Scan document', desc: 'Capture pages with your camera and save as PDF.', color: '#DB2777' },
   { href: '/pdf-to-images', icon: '🖨️', title: 'PDF → Images', desc: 'Export every page as a JPG or PNG.', color: '#DB2777' },
   { href: '/compress-images', icon: '📦', title: 'Compress images', desc: 'Shrink JPG / PNG / WebP file size.', color: '#D97706' },
+  { href: '/image-to-jpg', icon: '🔄', title: 'Image to JPG', desc: 'Convert PNG, GIF, TIFF, PSD, SVG, WebP, HEIC & RAW to JPG.', color: '#2563EB' },
   { href: '/watermark', icon: '💧', title: 'Add watermark', desc: 'Stamp a diagonal text watermark on every page.', color: '#7C3AED' },
   { href: '/page-numbers', icon: '#️⃣', title: 'Add page numbers', desc: 'Number every page, choose position & start.', color: '#4F46E5' },
   { href: '/remove-metadata', icon: '🛡️', title: 'Remove metadata', desc: 'Strip title, author, and other hidden info.', color: '#475569' },
