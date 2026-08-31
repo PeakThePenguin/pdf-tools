@@ -28,7 +28,7 @@ export default function ToolShell({
             </svg>
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/thai-logo.png" alt="" width={36} height={36} className="flex-shrink-0" />
+          <img src="/thai-logo.png" alt="" width={53} height={53} className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="app-header-title">{title}</div>
             {subtitle && <div className="app-header-subtitle">{subtitle}</div>}

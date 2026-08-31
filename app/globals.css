@@ -67,9 +67,6 @@ body {
   font-weight: 800;
   letter-spacing: 0.03em;
   line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .app-header-subtitle {
   color: rgba(255,255,255,0.9);
