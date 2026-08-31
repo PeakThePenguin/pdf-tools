@@ -18,10 +18,28 @@ body {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  width: 100%;
   max-width: 430px;
   margin: 0 auto;
   background: #ffffff;
   box-shadow: 0 0 40px rgba(0,0,0,0.15);
+}
+@media (min-width: 640px) {
+  .app-shell {
+    max-width: 640px;
+  }
+}
+
+/* Tool list (home) page gets extra width on larger screens */
+@media (min-width: 900px) {
+  .app-shell.app-shell--home {
+    max-width: 900px;
+  }
+}
+@media (min-width: 1200px) {
+  .app-shell.app-shell--home {
+    max-width: 1200px;
+  }
 }
 
 /* ── Page header ───────────────────────────────────── */

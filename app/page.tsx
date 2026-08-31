@@ -32,7 +32,7 @@ const TOOLS: Tool[] = [
 
 export default function PdfToolsPage() {
   return (
-    <div className="app-shell">
+    <div className="app-shell app-shell--home">
       <header className="app-header">
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -52,7 +52,7 @@ export default function PdfToolsPage() {
           </p>
         </div>
 
-        <div className="px-3 pb-4 grid grid-cols-2 gap-2.5 mt-2">
+        <div className="px-3 pb-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 mt-2">
           {TOOLS.map((tool) => (
             <Link
               key={tool.href}
