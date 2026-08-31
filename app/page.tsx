@@ -34,8 +34,14 @@ export default function PdfToolsPage() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-header-title">PC-TEAM 4 PDF TOOLS</div>
-        <div className="app-header-subtitle">Runs entirely in your browser</div>
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/thai-logo.png" alt="" width={28} height={28} className="flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="app-header-title">PC-TEAM 4 PDF TOOLS</div>
+            <div className="app-header-subtitle">Runs entirely in your browser</div>
+          </div>
+        </div>
       </header>
 
       <div className="page-body">
