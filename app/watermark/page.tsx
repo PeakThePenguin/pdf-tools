@@ -31,7 +31,7 @@ export default function WatermarkPage() {
   }
 
   return (
-    <ToolShell title="ADD WATERMARK TO PDF" subtitle="Diagonal text watermark, bottom-left to top-right">
+    <ToolShell title="WATERMARK PDF" subtitle="Diagonal text watermark, bottom-left to top-right">
       <div className="px-3 pt-3 space-y-3">
         {!file && <FileDrop accept="application/pdf" onFiles={(f) => setFile(f[0])} />}
 
