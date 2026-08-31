@@ -35,6 +35,7 @@ interface Tool {
 const TOOLS: Tool[] = [
   { href: '/compress-pdf', icon: FileArchive, title: 'Compress PDF', desc: 'Shrink a PDF by recompressing its embedded photos.', color: '#D97706' },
   { href: '/merge', icon: Combine, title: 'Merge PDF', desc: 'Combine multiple PDFs into one, in any order.', color: '#3B82F6' },
+  { href: '/watermark', icon: Droplet, title: 'Add watermark to PDF', desc: 'Stamp a diagonal text watermark on every page.', color: '#7C3AED' },
   { href: '/split', icon: Scissors, title: 'Split / Extract pages', desc: 'Pull out specific pages or split every page apart.', color: '#0EA5E9' },
   { href: '/organize', icon: FolderOpen, title: 'Organize pages', desc: 'Reorder, rotate, or delete pages visually.', color: '#8B5CF6' },
   { href: '/remove-pages', icon: Trash2, title: 'Remove pages', desc: 'Delete specific pages from a PDF.', color: '#8B5CF6' },
@@ -48,7 +49,6 @@ const TOOLS: Tool[] = [
   { href: '/pdf-to-images', icon: Printer, title: 'PDF → Images', desc: 'Export every page as a JPG or PNG.', color: '#DB2777' },
   { href: '/compress-images', icon: Package, title: 'Compress images', desc: 'Shrink JPG / PNG / WebP file size.', color: '#D97706' },
   { href: '/image-to-jpg', icon: ImageDown, title: 'Image to JPG', desc: 'Convert PNG, GIF, TIFF, PSD, SVG, WebP, HEIC & RAW to JPG.', color: '#2563EB' },
-  { href: '/watermark', icon: Droplet, title: 'Add watermark to PDF', desc: 'Stamp a diagonal text watermark on every page.', color: '#7C3AED' },
   { href: '/watermark-image', icon: Droplets, title: 'Add watermark to Image', desc: 'Stamp a diagonal text watermark on a JPG, PNG, or GIF.', color: '#7C3AED' },
   { href: '/page-numbers', icon: Hash, title: 'Add page numbers', desc: 'Number every page, choose position & start.', color: '#4F46E5' },
   { href: '/remove-metadata', icon: Shield, title: 'Remove metadata', desc: 'Strip title, author, and other hidden info.', color: '#475569' },
