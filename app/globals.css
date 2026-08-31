@@ -52,7 +52,7 @@ body {
 }
 .app-header-title {
   color: var(--gold);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.03em;
   line-height: 1.2;
@@ -62,7 +62,7 @@ body {
 }
 .app-header-subtitle {
   color: rgba(255,255,255,0.9);
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 1px;
 }
 
