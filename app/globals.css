@@ -66,6 +66,18 @@ body {
   margin-top: 1px;
 }
 
+/* Bigger header on the tool list (home) page */
+.app-header--home {
+  padding: 20px 18px 18px;
+}
+.app-header--home .app-header-title {
+  font-size: 19px;
+}
+.app-header--home .app-header-subtitle {
+  font-size: 14px;
+  margin-top: 3px;
+}
+
 /* ── Form inputs ──────────────────────────────────── */
 .app-input,
 .app-textarea {

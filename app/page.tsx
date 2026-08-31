@@ -11,6 +11,7 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
+  { href: '/compress-pdf', icon: '🗜️', title: 'Compress PDF', desc: 'Shrink a PDF by recompressing its embedded photos.', color: '#D97706' },
   { href: '/merge', icon: '📎', title: 'Merge PDF', desc: 'Combine multiple PDFs into one, in any order.', color: '#3B82F6' },
   { href: '/split', icon: '✂️', title: 'Split / Extract pages', desc: 'Pull out specific pages or split every page apart.', color: '#0EA5E9' },
   { href: '/organize', icon: '🗂️', title: 'Organize pages', desc: 'Reorder, rotate, or delete pages visually.', color: '#8B5CF6' },
@@ -23,7 +24,6 @@ const TOOLS: Tool[] = [
   { href: '/images-to-pdf', icon: '🖼️', title: 'Images → PDF', desc: 'Combine photos or scans into one PDF.', color: '#2563EB' },
   { href: '/scan', icon: '📷', title: 'Scan document', desc: 'Capture pages with your camera and save as PDF.', color: '#DB2777' },
   { href: '/pdf-to-images', icon: '🖨️', title: 'PDF → Images', desc: 'Export every page as a JPG or PNG.', color: '#DB2777' },
-  { href: '/compress-pdf', icon: '🗜️', title: 'Compress PDF', desc: 'Shrink a PDF by recompressing its embedded photos.', color: '#D97706' },
   { href: '/compress-images', icon: '📦', title: 'Compress images', desc: 'Shrink JPG / PNG / WebP file size.', color: '#D97706' },
   { href: '/watermark', icon: '💧', title: 'Add watermark', desc: 'Stamp a diagonal text watermark on every page.', color: '#7C3AED' },
   { href: '/page-numbers', icon: '#️⃣', title: 'Add page numbers', desc: 'Number every page, choose position & start.', color: '#4F46E5' },
@@ -33,10 +33,10 @@ const TOOLS: Tool[] = [
 export default function PdfToolsPage() {
   return (
     <div className="app-shell app-shell--home">
-      <header className="app-header">
+      <header className="app-header app-header--home">
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/thai-logo.png" alt="" width={28} height={28} className="flex-shrink-0" />
+          <img src="/thai-logo.png" alt="" width={44} height={44} className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="app-header-title">PC-TEAM 4 PDF TOOLS</div>
             <div className="app-header-subtitle">Runs entirely in your browser</div>
