@@ -182,16 +182,25 @@ export async function nUpPdf(bytes: ArrayBuffer, n: 2 | 4 | 6 | 9): Promise<Uint
 
 // ── Watermark / page numbers ────────────────────────────────────────
 
+/** Parse a "#rrggbb" string into 0–1 fractions, defaulting to mid-gray. */
+function hexToRgb01(hex?: string): { r: number; g: number; b: number } {
+  const clean = (hex ?? '#808080').replace('#', '')
+  const r = parseInt(clean.substring(0, 2), 16) / 255
+  const g = parseInt(clean.substring(2, 4), 16) / 255
+  const b = parseInt(clean.substring(4, 6), 16) / 255
+  return { r, g, b }
+}
+
 export async function addTextWatermark(
   bytes: ArrayBuffer,
   text: string,
-  opts?: { opacity?: number; size?: number; colorGray?: number }
+  opts?: { opacity?: number; size?: number; color?: string }
 ): Promise<Uint8Array> {
   const doc = await loadPdf(bytes)
   const font = await doc.embedFont(StandardFonts.HelveticaBold)
   const opacity = opts?.opacity ?? 0.22
   const requestedSize = opts?.size ?? 48
-  const gray = opts?.colorGray ?? 0.5
+  const { r, g, b } = hexToRgb01(opts?.color)
   for (const page of doc.getPages()) {
     const { width, height } = page.getSize()
 
@@ -240,7 +249,7 @@ export async function addTextWatermark(
       y,
       size,
       font,
-      color: rgb(gray, gray, gray),
+      color: rgb(r, g, b),
       opacity,
       rotate: degrees((angleRad * 180) / Math.PI),
     })
@@ -476,7 +485,7 @@ export async function imagesToPdf(files: File[], opts?: { fitToA4?: boolean }): 
 export async function addImageWatermark(
   file: File,
   text: string,
-  opts?: { opacity?: number; size?: number; colorGray?: number; quality?: number }
+  opts?: { opacity?: number; size?: number; color?: string; quality?: number }
 ): Promise<{ blob: Blob; note?: string }> {
   let bitmap: ImageBitmap
   try {
@@ -502,7 +511,7 @@ export async function addImageWatermark(
 
   const opacity = opts?.opacity ?? 0.22
   const requestedSize = opts?.size ?? 48
-  const gray = opts?.colorGray ?? 0.5
+  const color = opts?.color ?? '#808080'
 
   // atan2(height, width) is the bottom-left→top-right diagonal angle in
   // normal (y-up) math terms, same as the PDF version. Canvas is y-down, so
@@ -527,8 +536,7 @@ export async function addImageWatermark(
   ctx.translate(width / 2, height / 2)
   ctx.rotate(-theta)
   ctx.globalAlpha = opacity
-  const g = Math.round(gray * 255)
-  ctx.fillStyle = `rgb(${g}, ${g}, ${g})`
+  ctx.fillStyle = color
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(text, 0, 0)

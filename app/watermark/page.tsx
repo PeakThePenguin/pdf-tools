@@ -6,12 +6,14 @@ import FileDrop from '@/app/components/FileDrop'
 import { addTextWatermark, downloadBytes, stripExt } from '@/app/lib/engine'
 
 const PRESETS = ['CONFIDENTIAL', 'PC-TEAM 4 FOR INTERNAL USE ONLY', 'DRAFT']
+const COLOR_PRESETS = ['#808080', '#DC2626', '#000000', '#6B2D8B']
 
 export default function WatermarkPage() {
   const [file, setFile] = useState<File | null>(null)
   const [text, setText] = useState('CONFIDENTIAL')
   const [opacity, setOpacity] = useState(0.22)
   const [size, setSize] = useState(48)
+  const [color, setColor] = useState('#808080')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,7 +23,7 @@ export default function WatermarkPage() {
     setError(null)
     try {
       const bytes = await file.arrayBuffer()
-      const out = await addTextWatermark(bytes, text.trim(), { opacity, size })
+      const out = await addTextWatermark(bytes, text.trim(), { opacity, size, color })
       downloadBytes(out, `${stripExt(file.name)}_watermarked.pdf`)
     } catch (e) {
       setError((e as Error).message || 'Failed to add watermark.')
@@ -78,6 +80,34 @@ export default function WatermarkPage() {
             <div>
               <p className="text-[13px] text-gray-500 mb-1">Size: {size}pt</p>
               <input type="range" min={20} max={90} step={2} value={size} onChange={(e) => setSize(Number(e.target.value))} className="w-full" />
+            </div>
+
+            <div>
+              <label className="field-label">Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  style={{ width: 40, height: 32, padding: 0, border: '1px solid #bbb', borderRadius: 4, background: 'none', cursor: 'pointer' }}
+                />
+                <div className="flex gap-1.5">
+                  {COLOR_PRESETS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      aria-label={c}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: c,
+                        border: color.toLowerCase() === c.toLowerCase() ? '2px solid var(--purple)' : '1px solid #e5e7eb',
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <button
