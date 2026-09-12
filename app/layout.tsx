@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Lato } from 'next/font/google'
+import { Lato, Charmonman } from 'next/font/google'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import './globals.css'
 
@@ -7,6 +7,16 @@ const lato = Lato({
   subsets: ['latin'],
   weight: ['400', '700', '900'],
   variable: '--font-lato',
+  display: 'swap',
+})
+
+// Thai-script signature font for the "type your name" tab on the Sign PDF
+// tool — Latin-only cursive fonts (Dancing Script etc.) have no Thai
+// glyphs, and Charmonman supports both.
+const charmonman = Charmonman({
+  subsets: ['thai', 'latin'],
+  weight: ['700'],
+  variable: '--font-signature',
   display: 'swap',
 })
 
@@ -33,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`h-full ${lato.variable}`}>
+    <html lang="en" className={`h-full ${lato.variable} ${charmonman.variable}`}>
       <body className="h-full bg-gray-50">
         <ServiceWorkerRegister />
         {children}

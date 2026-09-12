@@ -21,6 +21,7 @@ import {
   Droplets,
   Hash,
   Shield,
+  Signature,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -36,6 +37,7 @@ const TOOLS: Tool[] = [
   { href: '/compress-pdf', icon: FileArchive, title: 'Compress PDF', desc: 'Shrink a PDF by recompressing its embedded photos.', color: '#D97706' },
   { href: '/merge', icon: Combine, title: 'Merge PDF', desc: 'Combine multiple PDFs into one, in any order.', color: '#3B82F6' },
   { href: '/watermark', icon: Droplet, title: 'Add watermark to PDF', desc: 'Stamp a diagonal text watermark on every page.', color: '#7C3AED' },
+  { href: '/sign', icon: Signature, title: 'Sign PDF', desc: 'Draw, upload, or type a signature and place it on the page.', color: '#16A34A' },
   { href: '/split', icon: Scissors, title: 'Split / Extract pages', desc: 'Pull out specific pages or split every page apart.', color: '#0EA5E9' },
   { href: '/organize', icon: FolderOpen, title: 'Organize pages', desc: 'Reorder, rotate, or delete pages visually.', color: '#8B5CF6' },
   { href: '/remove-pages', icon: Trash2, title: 'Remove pages', desc: 'Delete specific pages from a PDF.', color: '#8B5CF6' },

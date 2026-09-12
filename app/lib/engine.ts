@@ -1,4 +1,4 @@
-import { PDFDocument, PageSizes, StandardFonts, degrees, rgb, PDFName, PDFNumber, PDFRawStream } from 'pdf-lib'
+import { PDFDocument, PageSizes, StandardFonts, degrees, rgb, PDFName, PDFNumber, PDFRawStream, PDFFont, PDFImage } from 'pdf-lib'
 
 /** Load a PDFDocument from raw bytes, tolerating broken/encrypted metadata. */
 export async function loadPdf(bytes: ArrayBuffer | Uint8Array): Promise<PDFDocument> {
@@ -548,4 +548,84 @@ export async function addImageWatermark(
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), outMime, outMime === 'image/jpeg' ? quality : undefined)
   )
   return { blob, note: isGif ? 'GIF was exported as a PNG (first frame only) — animated GIFs can’t be watermarked frame-by-frame in the browser.' : undefined }
+}
+
+// ── Sign PDF ─────────────────────────────────────────────────────────
+
+/**
+ * A signature/name/date stamp placed on one page. Coordinates use screen
+ * convention — (0,0) is the page's top-left corner, y grows downward,
+ * matching the drag-to-position live preview — and get flipped to
+ * pdf-lib's bottom-up y-axis in signPdf(). All fractions are relative to
+ * that page's own width/height, so placement survives pages of different
+ * sizes in the same document.
+ */
+export type SignElement =
+  | { id: string; kind: 'image'; pageIndex: number; xPct: number; yPct: number; widthPct: number; aspect: number; dataUrl: string }
+  | { id: string; kind: 'text'; pageIndex: number; xPct: number; yPct: number; text: string; color: string; sizePt: number }
+
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+/**
+ * Stamp signature images and text labels onto specific pages. Text uses a
+ * bundled Thai font (Sarabun) via fontkit, not pdf-lib's built-in
+ * Helvetica — the standard 14 PDF fonts are WinAnsi/Latin-only and throw
+ * on Thai characters, which a name/date stamp in this app will routinely
+ * contain.
+ */
+export async function signPdf(bytes: ArrayBuffer, elements: SignElement[]): Promise<Uint8Array> {
+  const doc = await loadPdf(bytes)
+  const fontkit = (await import('@pdf-lib/fontkit')).default
+  doc.registerFontkit(fontkit)
+  const pages = doc.getPages()
+
+  let thaiFont: PDFFont | null = null
+  async function getThaiFont(): Promise<PDFFont> {
+    if (!thaiFont) {
+      const res = await fetch('/fonts/Sarabun-Regular.ttf')
+      const fontBytes = await res.arrayBuffer()
+      thaiFont = await doc.embedFont(fontBytes)
+    }
+    return thaiFont
+  }
+
+  const imageCache = new Map<string, PDFImage>()
+  async function getImage(dataUrl: string): Promise<PDFImage> {
+    let img = imageCache.get(dataUrl)
+    if (!img) {
+      img = await doc.embedPng(dataUrlToBytes(dataUrl))
+      imageCache.set(dataUrl, img)
+    }
+    return img
+  }
+
+  for (const el of elements) {
+    const page = pages[el.pageIndex]
+    if (!page) continue
+    const { width, height } = page.getSize()
+
+    if (el.kind === 'image') {
+      const img = await getImage(el.dataUrl)
+      const w = el.widthPct * width
+      const h = w * el.aspect
+      const x = el.xPct * width
+      const y = height - el.yPct * height - h
+      page.drawImage(img, { x, y, width: w, height: h })
+    } else {
+      const font = await getThaiFont()
+      const size = el.sizePt
+      const x = el.xPct * width
+      const y = height - el.yPct * height - size
+      const { r, g, b } = hexToRgb01(el.color)
+      page.drawText(el.text, { x, y, size, font, color: rgb(r, g, b) })
+    }
+  }
+
+  return doc.save()
 }
