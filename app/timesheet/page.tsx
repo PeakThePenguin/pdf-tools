@@ -107,15 +107,21 @@ export default function TimesheetPage() {
   }
 
   async function handleGenerate() {
+    if (selectedCount === 0) {
+      setError('Select at least one day to include in the PDF.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
-      const pdfRows: TimesheetRow[] = rows.map((r) => ({
-        day: r.day,
-        timeIn: formatTime12(r.timeIn),
-        timeOut: formatTime12(r.timeOut),
-        remark: resolveRemark(r),
-      }))
+      const pdfRows: TimesheetRow[] = rows
+        .filter((r) => r.checked)
+        .map((r) => ({
+          day: r.day,
+          timeIn: formatTime12(r.timeIn),
+          timeOut: formatTime12(r.timeOut),
+          remark: resolveRemark(r),
+        }))
       const bytes = await generateTimesheetPdf({
         name: name.trim(),
         persNo: persNo.trim(),
