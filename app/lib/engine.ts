@@ -767,6 +767,17 @@ async function drawCenteredTextImage(page: PDFPage, getTextImage: GetTextImage, 
   page.drawImage(rendered.img, { x, y: yBaseline - (rendered.heightPt - rendered.ascentPt), width: rendered.widthPt, height: rendered.heightPt })
 }
 
+// Width, in points, of the "( name )" signature blanks in the footer — wide
+// open parentheses matching the original printed form's fill-in-the-blank
+// signature line, with the name (if any) centered in between.
+const SIGNATURE_FIELD_WIDTH = 240
+
+async function drawParenField(page: PDFPage, getTextImage: GetTextImage, text: string, xLeft: number, yBaseline: number, sizePt: number, color: ReturnType<typeof rgb>) {
+  await drawTextImage(page, getTextImage, '(', xLeft, yBaseline, sizePt, color)
+  await drawTextImage(page, getTextImage, ')', xLeft + SIGNATURE_FIELD_WIDTH, yBaseline, sizePt, color)
+  await drawCenteredTextImage(page, getTextImage, text, xLeft, xLeft + SIGNATURE_FIELD_WIDTH, yBaseline, sizePt, color)
+}
+
 /**
  * Draw the PC Team 4 monthly time-attendance form from scratch (this isn't
  * filling an existing PDF template — the source is a plain printed table,
@@ -858,11 +869,11 @@ export async function generateTimesheetPdf(opts: TimesheetOptions): Promise<Uint
   await drawTextImage(page, getTextImage, 'พนักงานลงชื่อ', margin, y, 9, black)
   await drawTextImage(page, getTextImage, 'ผู้ขอลงเวลา', margin + 220, y, 9, black)
   y -= 22
-  await drawTextImage(page, getTextImage, `( ${opts.name || '.....................................'} )`, margin + 20, y, 9, black)
+  await drawParenField(page, getTextImage, opts.name, margin + 20, y, 9, black)
   y -= 24
   await drawTextImage(page, getTextImage, 'ผู้รับรอง (ระดับ 8,9)', margin, y, 9, black)
   y -= 22
-  await drawTextImage(page, getTextImage, `( ${opts.approverName || '.....................................'} )`, margin + 20, y, 9, black)
+  await drawParenField(page, getTextImage, opts.approverName, margin + 20, y, 9, black)
 
   return doc.save()
 }
