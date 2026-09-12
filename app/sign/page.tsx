@@ -45,7 +45,7 @@ function formatDate(iso: string, lang: DateLang, format: DateFormat, thaiDigits:
   }
   if (format === 'long') return `${ENGLISH_MONTHS[m - 1]} ${d}, ${y}`
   if (format === 'monthYear') return `${ENGLISH_MONTHS[m - 1]} ${y}`
-  return `${pad2(m)}/${pad2(d)}/${y}`
+  return `${pad2(d)}/${pad2(m)}/${y}`
 }
 
 function todayISO(): string {
@@ -639,7 +639,7 @@ export default function SignPage() {
                     {dateLang === 'th' ? '12 กันยายน 2569' : 'September 12, 2026'}
                   </PillButton>
                   <PillButton active={dateFormat === 'short'} onClick={() => setDateFormat('short')}>
-                    {dateLang === 'th' ? '12/09/2569' : '09/12/2026'}
+                    {dateLang === 'th' ? '12/09/2569' : '12/09/2026'}
                   </PillButton>
                   <PillButton active={dateFormat === 'monthYear'} onClick={() => setDateFormat('monthYear')}>
                     {dateLang === 'th' ? 'กันยายน 2569' : 'September 2026'}
