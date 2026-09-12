@@ -660,16 +660,111 @@ export interface TimesheetOptions {
 
 const TIMESHEET_MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-function drawCenteredText(page: PDFPage, font: PDFFont, text: string, xStart: number, xEnd: number, y: number, size: number, color: ReturnType<typeof rgb>) {
-  if (!text) return
-  let s = size
-  let w = font.widthOfTextAtSize(text, s)
-  const maxW = xEnd - xStart - 4
-  if (w > maxW && maxW > 0) {
-    s = Math.max(5, s * (maxW / w))
-    w = font.widthOfTextAtSize(text, s)
+// pdf-lib's page.drawText() has no OpenType shaping engine (no GSUB/GPOS) —
+// it places each glyph at a static per-character advance width. Thai
+// combining vowel/tone marks need contextual positioning relative to their
+// base consonant, so text drawn that way comes out with garbled/misplaced
+// spacing. The browser's own text engine shapes correctly, so every string
+// in this form is instead rendered to an offscreen canvas and embedded as a
+// PNG image (same trick already used for typed signatures in Sign PDF).
+
+const CANVAS_FONT_FAMILY = 'SarabunPdfCanvasFont'
+let canvasFontPromise: Promise<void> | null = null
+function ensureCanvasFont(): Promise<void> {
+  if (!canvasFontPromise) {
+    canvasFontPromise = (async () => {
+      const fontFace = new FontFace(CANVAS_FONT_FAMILY, 'url(/fonts/Sarabun-Regular.ttf)')
+      await fontFace.load()
+      document.fonts.add(fontFace)
+    })()
   }
-  page.drawText(text, { x: xStart + (xEnd - xStart - w) / 2, y, size: s, font, color })
+  return canvasFontPromise
+}
+
+// Render at a higher pixel density than the final PDF point size so the
+// embedded PNG stays crisp once placed on the page.
+const TEXT_IMAGE_SCALE = 4
+
+interface RenderedTextImage {
+  png: Uint8Array
+  widthPt: number
+  heightPt: number
+  ascentPt: number
+}
+
+/** Shape+rasterize one line of text via canvas and return it sized in PDF points. */
+async function renderTextToPng(text: string, sizePt: number, color: ReturnType<typeof rgb>): Promise<RenderedTextImage> {
+  await ensureCanvasFont()
+  const sizePx = sizePt * TEXT_IMAGE_SCALE
+  const font = `${sizePx}px "${CANVAS_FONT_FAMILY}"`
+  const measureCtx = document.createElement('canvas').getContext('2d')!
+  measureCtx.font = font
+  const m = measureCtx.measureText(text)
+  const ascent = Math.ceil(m.actualBoundingBoxAscent || sizePx * 0.85)
+  const descent = Math.ceil(m.actualBoundingBoxDescent || sizePx * 0.25)
+  const width = Math.max(1, Math.ceil(m.width))
+  const pad = 2
+  const canvas = document.createElement('canvas')
+  canvas.width = width + pad * 2
+  canvas.height = ascent + descent + pad * 2
+  const ctx = canvas.getContext('2d')!
+  ctx.font = font
+  ctx.fillStyle = `rgb(${Math.round(color.red * 255)}, ${Math.round(color.green * 255)}, ${Math.round(color.blue * 255)})`
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText(text, pad, pad + ascent)
+  const blob: Blob = await new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), 'image/png')
+  )
+  const png = new Uint8Array(await blob.arrayBuffer())
+  return {
+    png,
+    widthPt: canvas.width / TEXT_IMAGE_SCALE,
+    heightPt: canvas.height / TEXT_IMAGE_SCALE,
+    ascentPt: (pad + ascent) / TEXT_IMAGE_SCALE,
+  }
+}
+
+type TextImage = RenderedTextImage & { img: PDFImage }
+
+/** Per-document cache so repeated strings (day times, "OFFICE", …) are rasterized once. */
+function makeTextImageCache(doc: PDFDocument) {
+  const cache = new Map<string, Promise<TextImage>>()
+  return function getTextImage(text: string, sizePt: number, color: ReturnType<typeof rgb>): Promise<TextImage> {
+    const key = `${text} ${sizePt} ${color.red},${color.green},${color.blue}`
+    let entry = cache.get(key)
+    if (!entry) {
+      entry = (async () => {
+        const rendered = await renderTextToPng(text, sizePt, color)
+        const img = await doc.embedPng(rendered.png)
+        return { ...rendered, img }
+      })()
+      cache.set(key, entry)
+    }
+    return entry
+  }
+}
+
+type GetTextImage = ReturnType<typeof makeTextImageCache>
+
+/** Left-aligned text with its baseline at (x, yBaseline), pdf-lib's own drawText convention. */
+async function drawTextImage(page: PDFPage, getTextImage: GetTextImage, text: string, x: number, yBaseline: number, sizePt: number, color: ReturnType<typeof rgb>) {
+  if (!text) return
+  const { img, widthPt, heightPt, ascentPt } = await getTextImage(text, sizePt, color)
+  page.drawImage(img, { x, y: yBaseline - (heightPt - ascentPt), width: widthPt, height: heightPt })
+}
+
+/** Text centered in [xStart, xEnd], shrinking to fit, baseline at yBaseline. */
+async function drawCenteredTextImage(page: PDFPage, getTextImage: GetTextImage, text: string, xStart: number, xEnd: number, yBaseline: number, sizePt: number, color: ReturnType<typeof rgb>) {
+  if (!text) return
+  const maxW = xEnd - xStart - 4
+  let size = sizePt
+  let rendered = await getTextImage(text, size, color)
+  if (rendered.widthPt > maxW && maxW > 0) {
+    size = Math.max(5, size * (maxW / rendered.widthPt))
+    rendered = await getTextImage(text, size, color)
+  }
+  const x = xStart + (xEnd - xStart - rendered.widthPt) / 2
+  page.drawImage(rendered.img, { x, y: yBaseline - (rendered.heightPt - rendered.ascentPt), width: rendered.widthPt, height: rendered.heightPt })
 }
 
 /**
@@ -681,9 +776,9 @@ function drawCenteredText(page: PDFPage, font: PDFFont, text: string, xStart: nu
  */
 export async function generateTimesheetPdf(opts: TimesheetOptions): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
-  const font = await embedThaiFont(doc)
   const page = doc.addPage(PageSizes.A4)
   const { width: pageW, height: pageH } = page.getSize()
+  const getTextImage = makeTextImageCache(doc)
 
   const margin = 36
   const tableLeft = margin
@@ -692,19 +787,16 @@ export async function generateTimesheetPdf(opts: TimesheetOptions): Promise<Uint
 
   let y = pageH - margin
 
+  const headerTitle = 'ตารางบันทึกเวลาปฏิบัติงานของพนักงานต้อนรับฯ ที่ช่วยปฏิบัติหน้าที่ในกลุ่มงาน PC Team 4'
   try {
     const logoBytes = await (await fetch('/thai-logo.png')).arrayBuffer()
     const logo = await doc.embedPng(logoBytes)
     const logoH = 22
     const logoW = logoH * (logo.width / logo.height)
     page.drawImage(logo, { x: margin, y: y - logoH, width: logoW, height: logoH })
-    page.drawText('ตารางบันทึกเวลาปฏิบัติงานของพนักงานต้อนรับฯ ที่ช่วยปฏิบัติหน้าที่ในกลุ่มงาน PC Team 4', {
-      x: margin + logoW + 8, y: y - 14, size: 10.5, font, color: black,
-    })
+    await drawTextImage(page, getTextImage, headerTitle, margin + logoW + 8, y - 14, 10.5, black)
   } catch {
-    page.drawText('ตารางบันทึกเวลาปฏิบัติงานของพนักงานต้อนรับฯ ที่ช่วยปฏิบัติหน้าที่ในกลุ่มงาน PC Team 4', {
-      x: margin, y: y - 14, size: 10.5, font, color: black,
-    })
+    await drawTextImage(page, getTextImage, headerTitle, margin, y - 14, 10.5, black)
   }
   y -= 34
 
@@ -715,7 +807,7 @@ export async function generateTimesheetPdf(opts: TimesheetOptions): Promise<Uint
     `เดือน: ${TIMESHEET_MONTH_ABBR[opts.month - 1]}`,
     `ปี: ${opts.year}`,
   ].join('     ')
-  page.drawText(infoLine, { x: margin, y, size: 10, font, color: black })
+  await drawTextImage(page, getTextImage, infoLine, margin, y, 10, black)
   y -= 20
 
   const colDay = 34
@@ -739,38 +831,38 @@ export async function generateTimesheetPdf(opts: TimesheetOptions): Promise<Uint
   // Header row 1: two merged cells (record columns / remarks column).
   page.drawRectangle({ x: colXs[0], y: cy - headerRow1H, width: colXs[3] - colXs[0], height: headerRow1H, borderColor: black, borderWidth: 0.75 })
   page.drawRectangle({ x: colXs[3], y: cy - headerRow1H, width: colXs[4] - colXs[3], height: headerRow1H, borderColor: black, borderWidth: 0.75 })
-  drawCenteredText(page, font, 'บันทึกเวลาปฏิบัติงาน (ยกเว้น เสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์)', colXs[0], colXs[3], cy - headerRow1H + 4.5, 7.5, black)
-  drawCenteredText(page, font, 'หมายเหตุ', colXs[3], colXs[4], cy - headerRow1H + 4.5, 8, black)
+  await drawCenteredTextImage(page, getTextImage, 'บันทึกเวลาปฏิบัติงาน (ยกเว้น เสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์)', colXs[0], colXs[3], cy - headerRow1H + 4.5, 7.5, black)
+  await drawCenteredTextImage(page, getTextImage, 'หมายเหตุ', colXs[3], colXs[4], cy - headerRow1H + 4.5, 8, black)
   cy -= headerRow1H
 
   // Header row 2: column labels.
   drawGridRow(headerRow2H, 0.75)
-  drawCenteredText(page, font, 'วันที่', colXs[0], colXs[1], cy - headerRow2H + 4, 7.5, black)
-  drawCenteredText(page, font, 'เวลาเข้า', colXs[1], colXs[2], cy - headerRow2H + 4, 7.5, black)
-  drawCenteredText(page, font, 'เวลาออก', colXs[2], colXs[3], cy - headerRow2H + 4, 7.5, black)
-  drawCenteredText(page, font, '(เช่น Office, Work from Home เป็นต้น)', colXs[3], colXs[4], cy - headerRow2H + 4, 6.5, black)
+  await drawCenteredTextImage(page, getTextImage, 'วันที่', colXs[0], colXs[1], cy - headerRow2H + 4, 7.5, black)
+  await drawCenteredTextImage(page, getTextImage, 'เวลาเข้า', colXs[1], colXs[2], cy - headerRow2H + 4, 7.5, black)
+  await drawCenteredTextImage(page, getTextImage, 'เวลาออก', colXs[2], colXs[3], cy - headerRow2H + 4, 7.5, black)
+  await drawCenteredTextImage(page, getTextImage, '(เช่น Office, Work from Home เป็นต้น)', colXs[3], colXs[4], cy - headerRow2H + 4, 6.5, black)
   cy -= headerRow2H
 
   for (const row of opts.rows) {
     drawGridRow(rowH, 0.5)
     const textY = cy - rowH / 2 - 2.8
     const fs = Math.min(8, Math.max(5, rowH - 4))
-    drawCenteredText(page, font, String(row.day), colXs[0], colXs[1], textY, fs, black)
-    drawCenteredText(page, font, row.timeIn, colXs[1], colXs[2], textY, fs, black)
-    drawCenteredText(page, font, row.timeOut, colXs[2], colXs[3], textY, fs, black)
-    drawCenteredText(page, font, row.remark, colXs[3], colXs[4], textY, fs, black)
+    await drawCenteredTextImage(page, getTextImage, String(row.day), colXs[0], colXs[1], textY, fs, black)
+    await drawCenteredTextImage(page, getTextImage, row.timeIn, colXs[1], colXs[2], textY, fs, black)
+    await drawCenteredTextImage(page, getTextImage, row.timeOut, colXs[2], colXs[3], textY, fs, black)
+    await drawCenteredTextImage(page, getTextImage, row.remark, colXs[3], colXs[4], textY, fs, black)
     cy -= rowH
   }
 
   y = cy - 26
-  page.drawText('พนักงานลงชื่อ', { x: margin, y, size: 9, font, color: black })
-  page.drawText('ผู้ขอลงเวลา', { x: margin + 220, y, size: 9, font, color: black })
+  await drawTextImage(page, getTextImage, 'พนักงานลงชื่อ', margin, y, 9, black)
+  await drawTextImage(page, getTextImage, 'ผู้ขอลงเวลา', margin + 220, y, 9, black)
   y -= 22
-  page.drawText(`( ${opts.name || '.....................................'} )`, { x: margin + 20, y, size: 9, font, color: black })
+  await drawTextImage(page, getTextImage, `( ${opts.name || '.....................................'} )`, margin + 20, y, 9, black)
   y -= 24
-  page.drawText('ผู้รับรอง (ระดับ 8,9)', { x: margin, y, size: 9, font, color: black })
+  await drawTextImage(page, getTextImage, 'ผู้รับรอง (ระดับ 8,9)', margin, y, 9, black)
   y -= 22
-  page.drawText(`( ${opts.approverName || '.....................................'} )`, { x: margin + 20, y, size: 9, font, color: black })
+  await drawTextImage(page, getTextImage, `( ${opts.approverName || '.....................................'} )`, margin + 20, y, 9, black)
 
   return doc.save()
 }
