@@ -36,7 +36,7 @@ function buildRows(month: number, year: number, prev: RowState[]): RowState[] {
   const count = daysInMonth(month, year)
   return Array.from({ length: count }, (_, i) => {
     const day = i + 1
-    return prevByDay.get(day) ?? { day, checked: false, timeIn: '', timeOut: '', remarkKind: '', remarkOther: '' }
+    return prevByDay.get(day) ?? { day, checked: false, timeIn: '08:00', timeOut: '17:00', remarkKind: 'OFFICE', remarkOther: '' }
   })
 }
 
