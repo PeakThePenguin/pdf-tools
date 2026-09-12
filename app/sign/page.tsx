@@ -12,19 +12,35 @@ const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
 ]
+const ENGLISH_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
 const PREVIEW_SCALE = 1.4
+
+type DateLang = 'th' | 'en'
+type DateFormat = 'long' | 'short'
 
 function toThaiDigits(s: string): string {
   const map: Record<string, string> = { '0': '๐', '1': '๑', '2': '๒', '3': '๓', '4': '๔', '5': '๕', '6': '๖', '7': '๗', '8': '๘', '9': '๙' }
   return s.replace(/[0-9]/g, (d) => map[d])
 }
 
-function formatThaiDate(iso: string, thaiDigits: boolean): string {
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function formatDate(iso: string, lang: DateLang, format: DateFormat, thaiDigits: boolean): string {
   if (!iso) return ''
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return ''
-  const s = `${d} ${THAI_MONTHS[m - 1]} พ.ศ. ${y + 543}`
-  return thaiDigits ? toThaiDigits(s) : s
+
+  if (lang === 'th') {
+    const buddhistYear = y + 543
+    const s = format === 'long' ? `${d} ${THAI_MONTHS[m - 1]} พ.ศ. ${buddhistYear}` : `${pad2(d)}/${pad2(m)}/${buddhistYear}`
+    return thaiDigits ? toThaiDigits(s) : s
+  }
+  return format === 'long' ? `${ENGLISH_MONTHS[m - 1]} ${d}, ${y}` : `${pad2(m)}/${pad2(d)}/${y}`
 }
 
 function todayISO(): string {
@@ -36,6 +52,23 @@ let idCounter = 0
 function nextId(): string {
   idCounter += 1
   return `el-${Date.now()}-${idCounter}`
+}
+
+function PillButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-2 py-1 text-[11px] font-semibold"
+      style={{
+        border: `1px solid ${active ? 'var(--purple)' : '#e5e7eb'}`,
+        color: active ? 'var(--purple)' : '#666',
+        background: active ? '#f3e8ff' : '#fff',
+        borderRadius: 4,
+      }}
+    >
+      {children}
+    </button>
+  )
 }
 
 function ColorSwatches({ value, onChange }: { value: string; onChange: (c: string) => void }) {
@@ -75,6 +108,8 @@ export default function SignPage() {
   const [nameColor, setNameColor] = useState(COLORS[0])
   const [dateISO, setDateISO] = useState(todayISO())
   const [dateColor, setDateColor] = useState(COLORS[0])
+  const [dateLang, setDateLang] = useState<DateLang>('th')
+  const [dateFormat, setDateFormat] = useState<DateFormat>('long')
   const [thaiDigits, setThaiDigits] = useState(true)
 
   const previewRef = useRef<HTMLDivElement>(null)
@@ -244,7 +279,7 @@ export default function SignPage() {
   }
 
   function addDateStamp() {
-    const label = formatThaiDate(dateISO, thaiDigits)
+    const label = formatDate(dateISO, dateLang, dateFormat, thaiDigits)
     if (!label) return
     const el: SignElement = {
       id: nextId(), kind: 'text', pageIndex: selectedPage,
@@ -497,16 +532,30 @@ export default function SignPage() {
                   + Date
                 </button>
               </div>
-              <p className="text-[11px] text-gray-500">{formatThaiDate(dateISO, thaiDigits)}</p>
-              <div className="flex items-center gap-3">
+              <p className="text-[11px] text-gray-500">{formatDate(dateISO, dateLang, dateFormat, thaiDigits)}</p>
+
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex gap-1.5">
-                  <button onClick={() => setThaiDigits(true)} className="px-2 py-1 text-[11px] font-semibold" style={{ border: `1px solid ${thaiDigits ? 'var(--purple)' : '#e5e7eb'}`, color: thaiDigits ? 'var(--purple)' : '#666', background: thaiDigits ? '#f3e8ff' : '#fff', borderRadius: 4 }}>
-                    Thai digits
-                  </button>
-                  <button onClick={() => setThaiDigits(false)} className="px-2 py-1 text-[11px] font-semibold" style={{ border: `1px solid ${!thaiDigits ? 'var(--purple)' : '#e5e7eb'}`, color: !thaiDigits ? 'var(--purple)' : '#666', background: !thaiDigits ? '#f3e8ff' : '#fff', borderRadius: 4 }}>
-                    Arabic digits
-                  </button>
+                  <PillButton active={dateLang === 'th'} onClick={() => setDateLang('th')}>ไทย</PillButton>
+                  <PillButton active={dateLang === 'en'} onClick={() => setDateLang('en')}>English</PillButton>
                 </div>
+                <div className="flex gap-1.5">
+                  <PillButton active={dateFormat === 'long'} onClick={() => setDateFormat('long')}>
+                    {dateLang === 'th' ? '12 กันยายน 2569' : 'September 12, 2026'}
+                  </PillButton>
+                  <PillButton active={dateFormat === 'short'} onClick={() => setDateFormat('short')}>
+                    {dateLang === 'th' ? '12/09/2569' : '09/12/2026'}
+                  </PillButton>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {dateLang === 'th' && (
+                  <div className="flex gap-1.5">
+                    <PillButton active={thaiDigits} onClick={() => setThaiDigits(true)}>Thai digits</PillButton>
+                    <PillButton active={!thaiDigits} onClick={() => setThaiDigits(false)}>Arabic digits</PillButton>
+                  </div>
+                )}
                 <ColorSwatches value={dateColor} onChange={setDateColor} />
               </div>
             </div>
