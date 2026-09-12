@@ -96,6 +96,9 @@ export default function SignPage() {
   const [preview, setPreview] = useState<{ dataUrl: string; width: number; height: number } | null>(null)
   const [elements, setElements] = useState<SignElement[]>([])
   const [selectedElId, setSelectedElId] = useState<string | null>(null)
+  // null = "just the page I'm looking at" (tracks selectedPage automatically);
+  // an explicit array = a fixed set of pages the next Add applies to.
+  const [targetPages, setTargetPages] = useState<number[] | null>(null)
 
   const [tab, setTab] = useState<'draw' | 'upload' | 'type'>('draw')
   const [sigColor, setSigColor] = useState(COLORS[0])
@@ -197,13 +200,34 @@ export default function SignPage() {
     setHasDrawing(false)
   }
 
+  function effectiveTargetPages(): number[] {
+    return targetPages === null ? [selectedPage] : targetPages
+  }
+
+  function togglePageTarget(idx: number) {
+    setTargetPages((prev) => {
+      const base = new Set(prev === null ? [selectedPage] : prev)
+      if (base.has(idx)) base.delete(idx)
+      else base.add(idx)
+      const arr = Array.from(base).sort((a, b) => a - b)
+      return arr.length === 0 ? [selectedPage] : arr
+    })
+  }
+
+  /** Selects the new element on the page currently being viewed, if there
+   * is one, so it's immediately visible without switching pages. */
+  function selectAfterAdd(newEls: SignElement[]) {
+    const onCurrent = newEls.find((e) => e.pageIndex === selectedPage)
+    setSelectedElId((onCurrent ?? newEls[newEls.length - 1])?.id ?? null)
+  }
+
   function addImageElement(dataUrl: string, aspect: number) {
-    const el: SignElement = {
-      id: nextId(), kind: 'image', pageIndex: selectedPage,
+    const newEls = effectiveTargetPages().map((pageIndex): SignElement => ({
+      id: nextId(), kind: 'image', pageIndex,
       xPct: 0.35, yPct: 0.4, widthPct: 0.3, aspect, dataUrl,
-    }
-    setElements((prev) => [...prev, el])
-    setSelectedElId(el.id)
+    }))
+    setElements((prev) => [...prev, ...newEls])
+    selectAfterAdd(newEls)
   }
 
   function addFromDrawing() {
@@ -270,23 +294,23 @@ export default function SignPage() {
 
   function addNameStamp() {
     if (!nameText.trim()) return
-    const el: SignElement = {
-      id: nextId(), kind: 'text', pageIndex: selectedPage,
+    const newEls = effectiveTargetPages().map((pageIndex): SignElement => ({
+      id: nextId(), kind: 'text', pageIndex,
       xPct: 0.1, yPct: 0.85, text: nameText.trim(), color: nameColor, sizePt: 14,
-    }
-    setElements((prev) => [...prev, el])
-    setSelectedElId(el.id)
+    }))
+    setElements((prev) => [...prev, ...newEls])
+    selectAfterAdd(newEls)
   }
 
   function addDateStamp() {
     const label = formatDate(dateISO, dateLang, dateFormat, thaiDigits)
     if (!label) return
-    const el: SignElement = {
-      id: nextId(), kind: 'text', pageIndex: selectedPage,
+    const newEls = effectiveTargetPages().map((pageIndex): SignElement => ({
+      id: nextId(), kind: 'text', pageIndex,
       xPct: 0.1, yPct: 0.9, text: label, color: dateColor, sizePt: 14,
-    }
-    setElements((prev) => [...prev, el])
-    setSelectedElId(el.id)
+    }))
+    setElements((prev) => [...prev, ...newEls])
+    selectAfterAdd(newEls)
   }
 
   function updateElement(id: string, patch: Partial<SignElement>) {
@@ -456,6 +480,47 @@ export default function SignPage() {
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="border border-gray-200 p-3 space-y-2" style={{ borderRadius: 4 }}>
+              <div className="flex items-center justify-between">
+                <p className="field-label mb-0">Apply to pages</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setTargetPages(null)} className="text-[11px] font-semibold" style={{ color: 'var(--purple)' }}>
+                    This page
+                  </button>
+                  <button onClick={() => setTargetPages(thumbs.map((t) => t.index))} className="text-[11px] font-bold" style={{ color: 'var(--purple)' }}>
+                    All pages
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {thumbs.map((t) => {
+                  const active = targetPages === null ? t.index === selectedPage : targetPages.includes(t.index)
+                  return (
+                    <button
+                      key={t.index}
+                      onClick={() => togglePageTarget(t.index)}
+                      className="text-[11px] font-semibold flex items-center justify-center"
+                      style={{
+                        width: 26, height: 26, borderRadius: 4,
+                        border: `1px solid ${active ? 'var(--purple)' : '#e5e7eb'}`,
+                        background: active ? '#f3e8ff' : '#fff',
+                        color: active ? 'var(--purple)' : '#666',
+                      }}
+                    >
+                      {t.index + 1}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-gray-400">
+                {targetPages === null
+                  ? `Signatures and stamps you add now go on page ${selectedPage + 1} only.`
+                  : targetPages.length === thumbs.length
+                    ? 'Signatures and stamps you add now go on every page.'
+                    : `Signatures and stamps you add now go on ${targetPages.length} page${targetPages.length === 1 ? '' : 's'} (${targetPages.map((p) => p + 1).join(', ')}).`}
+              </p>
             </div>
 
             <div className="border border-gray-200 p-3" style={{ borderRadius: 4 }}>
