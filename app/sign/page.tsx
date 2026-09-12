@@ -496,7 +496,7 @@ export default function SignPage() {
                     className="app-input"
                     value={typedName}
                     onChange={(e) => setTypedName(e.target.value)}
-                    placeholder="e.g. Somchai Jaidee"
+                    placeholder="e.g. Penguin Bindai"
                     maxLength={60}
                   />
                   <ColorSwatches value={sigColor} onChange={setSigColor} />
@@ -519,7 +519,7 @@ export default function SignPage() {
               <p className="field-label">Add name / date (optional)</p>
 
               <div className="flex gap-2 items-center">
-                <input className="app-input" value={nameText} onChange={(e) => setNameText(e.target.value)} placeholder="e.g. Somchai Jaidee" maxLength={80} />
+                <input className="app-input" value={nameText} onChange={(e) => setNameText(e.target.value)} placeholder="e.g. Penguin Bindai" maxLength={80} />
                 <button onClick={addNameStamp} disabled={!nameText.trim()} className="flex-shrink-0 px-3 py-2 text-xs font-bold text-white disabled:opacity-40" style={{ background: 'var(--purple)', borderRadius: 4 }}>
                   + Name
                 </button>
