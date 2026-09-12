@@ -19,7 +19,7 @@ const ENGLISH_MONTHS = [
 const PREVIEW_SCALE = 1.4
 
 type DateLang = 'th' | 'en'
-type DateFormat = 'long' | 'short'
+type DateFormat = 'long' | 'short' | 'monthYear'
 
 function toThaiDigits(s: string): string {
   const map: Record<string, string> = { '0': '๐', '1': '๑', '2': '๒', '3': '๓', '4': '๔', '5': '๕', '6': '๖', '7': '๗', '8': '๘', '9': '๙' }
@@ -37,10 +37,15 @@ function formatDate(iso: string, lang: DateLang, format: DateFormat, thaiDigits:
 
   if (lang === 'th') {
     const buddhistYear = y + 543
-    const s = format === 'long' ? `${d} ${THAI_MONTHS[m - 1]} พ.ศ. ${buddhistYear}` : `${pad2(d)}/${pad2(m)}/${buddhistYear}`
+    const s =
+      format === 'long' ? `${d} ${THAI_MONTHS[m - 1]} พ.ศ. ${buddhistYear}`
+      : format === 'monthYear' ? `${THAI_MONTHS[m - 1]} พ.ศ. ${buddhistYear}`
+      : `${pad2(d)}/${pad2(m)}/${buddhistYear}`
     return thaiDigits ? toThaiDigits(s) : s
   }
-  return format === 'long' ? `${ENGLISH_MONTHS[m - 1]} ${d}, ${y}` : `${pad2(m)}/${pad2(d)}/${y}`
+  if (format === 'long') return `${ENGLISH_MONTHS[m - 1]} ${d}, ${y}`
+  if (format === 'monthYear') return `${ENGLISH_MONTHS[m - 1]} ${y}`
+  return `${pad2(m)}/${pad2(d)}/${y}`
 }
 
 function todayISO(): string {
@@ -629,12 +634,15 @@ export default function SignPage() {
                   <PillButton active={dateLang === 'th'} onClick={() => setDateLang('th')}>ไทย</PillButton>
                   <PillButton active={dateLang === 'en'} onClick={() => setDateLang('en')}>English</PillButton>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   <PillButton active={dateFormat === 'long'} onClick={() => setDateFormat('long')}>
                     {dateLang === 'th' ? '12 กันยายน 2569' : 'September 12, 2026'}
                   </PillButton>
                   <PillButton active={dateFormat === 'short'} onClick={() => setDateFormat('short')}>
                     {dateLang === 'th' ? '12/09/2569' : '09/12/2026'}
+                  </PillButton>
+                  <PillButton active={dateFormat === 'monthYear'} onClick={() => setDateFormat('monthYear')}>
+                    {dateLang === 'th' ? 'กันยายน 2569' : 'September 2026'}
                   </PillButton>
                 </div>
               </div>
