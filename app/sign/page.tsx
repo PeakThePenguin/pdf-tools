@@ -429,6 +429,31 @@ export default function SignPage() {
                       {el.text}
                     </span>
                   )}
+                  {selectedElId === el.id && (
+                    <button
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeElement(el.id)
+                      }}
+                      aria-label="Remove"
+                      className="flex items-center justify-center text-white font-bold"
+                      style={{
+                        position: 'absolute',
+                        left: -9,
+                        top: -9,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        background: 'rgba(220,38,38,0.9)',
+                        fontSize: 11,
+                        lineHeight: 1,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
