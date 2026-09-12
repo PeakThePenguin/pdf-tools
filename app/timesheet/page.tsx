@@ -140,7 +140,7 @@ export default function TimesheetPage() {
         <div className="border border-gray-200 p-3 space-y-2.5" style={{ borderRadius: 4 }}>
           <div>
             <label className="field-label">Name</label>
-            <input className="app-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ASE AUKARAPOL D." />
+            <input className="app-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="AUKARAPOL D." />
           </div>
           <div>
             <label className="field-label">Pers.No.</label>
