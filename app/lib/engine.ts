@@ -1,4 +1,4 @@
-import { PDFDocument, PageSizes, StandardFonts, degrees, rgb, PDFName, PDFNumber, PDFRawStream, PDFFont, PDFImage } from 'pdf-lib'
+import { PDFDocument, PageSizes, StandardFonts, degrees, rgb, PDFName, PDFNumber, PDFRawStream, PDFFont, PDFImage, PDFPage } from 'pdf-lib'
 
 /** Load a PDFDocument from raw bytes, tolerating broken/encrypted metadata. */
 export async function loadPdf(bytes: ArrayBuffer | Uint8Array): Promise<PDFDocument> {
@@ -572,26 +572,35 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
   return bytes
 }
 
+let sarabunBytesPromise: Promise<ArrayBuffer> | null = null
+function getSarabunBytes(): Promise<ArrayBuffer> {
+  if (!sarabunBytesPromise) {
+    sarabunBytesPromise = fetch('/fonts/Sarabun-Regular.ttf').then((r) => r.arrayBuffer())
+  }
+  return sarabunBytesPromise
+}
+
 /**
- * Stamp signature images and text labels onto specific pages. Text uses a
- * bundled Thai font (Sarabun) via fontkit, not pdf-lib's built-in
- * Helvetica — the standard 14 PDF fonts are WinAnsi/Latin-only and throw
- * on Thai characters, which a name/date stamp in this app will routinely
- * contain.
+ * Embed the bundled Sarabun Thai font into a PDFDocument (registering
+ * fontkit on it first). pdf-lib's standard 14 fonts (Helvetica etc.) are
+ * WinAnsi/Latin-only and throw on Thai characters, which this app draws
+ * routinely (signature name/date stamps, generated Thai forms).
  */
-export async function signPdf(bytes: ArrayBuffer, elements: SignElement[]): Promise<Uint8Array> {
-  const doc = await loadPdf(bytes)
+export async function embedThaiFont(doc: PDFDocument): Promise<PDFFont> {
   const fontkit = (await import('@pdf-lib/fontkit')).default
   doc.registerFontkit(fontkit)
+  const fontBytes = await getSarabunBytes()
+  return doc.embedFont(fontBytes)
+}
+
+/** Stamp signature images and text labels onto specific pages. */
+export async function signPdf(bytes: ArrayBuffer, elements: SignElement[]): Promise<Uint8Array> {
+  const doc = await loadPdf(bytes)
   const pages = doc.getPages()
 
   let thaiFont: PDFFont | null = null
   async function getThaiFont(): Promise<PDFFont> {
-    if (!thaiFont) {
-      const res = await fetch('/fonts/Sarabun-Regular.ttf')
-      const fontBytes = await res.arrayBuffer()
-      thaiFont = await doc.embedFont(fontBytes)
-    }
+    if (!thaiFont) thaiFont = await embedThaiFont(doc)
     return thaiFont
   }
 
@@ -626,6 +635,142 @@ export async function signPdf(bytes: ArrayBuffer, elements: SignElement[]): Prom
       page.drawText(el.text, { x, y, size, font, color: rgb(r, g, b) })
     }
   }
+
+  return doc.save()
+}
+
+// ── Time attendance form (PC Team 4) ────────────────────────────────
+
+export interface TimesheetRow {
+  day: number
+  timeIn: string
+  timeOut: string
+  remark: string
+}
+
+export interface TimesheetOptions {
+  name: string
+  persNo: string
+  position: string
+  month: number // 1–12
+  year: number
+  approverName: string
+  rows: TimesheetRow[]
+}
+
+const TIMESHEET_MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+function drawCenteredText(page: PDFPage, font: PDFFont, text: string, xStart: number, xEnd: number, y: number, size: number, color: ReturnType<typeof rgb>) {
+  if (!text) return
+  let s = size
+  let w = font.widthOfTextAtSize(text, s)
+  const maxW = xEnd - xStart - 4
+  if (w > maxW && maxW > 0) {
+    s = Math.max(5, s * (maxW / w))
+    w = font.widthOfTextAtSize(text, s)
+  }
+  page.drawText(text, { x: xStart + (xEnd - xStart - w) / 2, y, size: s, font, color })
+}
+
+/**
+ * Draw the PC Team 4 monthly time-attendance form from scratch (this isn't
+ * filling an existing PDF template — the source is a plain printed table,
+ * so it's recreated with pdf-lib's drawing primitives instead). Row height
+ * is computed from the day count so any month (28–31 days) fits one A4
+ * page, matching the original's dense one-page layout.
+ */
+export async function generateTimesheetPdf(opts: TimesheetOptions): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  const font = await embedThaiFont(doc)
+  const page = doc.addPage(PageSizes.A4)
+  const { width: pageW, height: pageH } = page.getSize()
+
+  const margin = 36
+  const tableLeft = margin
+  const tableWidth = pageW - margin * 2
+  const black = rgb(0.1, 0.1, 0.1)
+
+  let y = pageH - margin
+
+  try {
+    const logoBytes = await (await fetch('/thai-logo.png')).arrayBuffer()
+    const logo = await doc.embedPng(logoBytes)
+    const logoH = 22
+    const logoW = logoH * (logo.width / logo.height)
+    page.drawImage(logo, { x: margin, y: y - logoH, width: logoW, height: logoH })
+    page.drawText('ตารางบันทึกเวลาปฏิบัติงานของพนักงานต้อนรับฯ ที่ช่วยปฏิบัติหน้าที่ในกลุ่มงาน PC Team 4', {
+      x: margin + logoW + 8, y: y - 14, size: 10.5, font, color: black,
+    })
+  } catch {
+    page.drawText('ตารางบันทึกเวลาปฏิบัติงานของพนักงานต้อนรับฯ ที่ช่วยปฏิบัติหน้าที่ในกลุ่มงาน PC Team 4', {
+      x: margin, y: y - 14, size: 10.5, font, color: black,
+    })
+  }
+  y -= 34
+
+  const infoLine = [
+    `ชื่อ: ${opts.name || '-'}`,
+    `Pers.No.: ${opts.persNo || '-'}`,
+    `ตำแหน่ง: ${opts.position}`,
+    `เดือน: ${TIMESHEET_MONTH_ABBR[opts.month - 1]}`,
+    `ปี: ${opts.year}`,
+  ].join('     ')
+  page.drawText(infoLine, { x: margin, y, size: 10, font, color: black })
+  y -= 20
+
+  const colDay = 34
+  const colIn = 105
+  const colOut = 105
+  const colXs = [tableLeft, tableLeft + colDay, tableLeft + colDay + colIn, tableLeft + colDay + colIn + colOut, tableLeft + tableWidth]
+  const headerRow1H = 15
+  const headerRow2H = 14
+  const footerBlockH = 100
+  const numRows = Math.max(1, opts.rows.length)
+  const availableForRows = y - headerRow1H - headerRow2H - (margin + footerBlockH)
+  const rowH = Math.max(11, availableForRows / numRows)
+
+  let cy = y
+  const drawGridRow = (h: number, thickness: number) => {
+    for (let i = 0; i < colXs.length - 1; i++) {
+      page.drawRectangle({ x: colXs[i], y: cy - h, width: colXs[i + 1] - colXs[i], height: h, borderColor: black, borderWidth: thickness })
+    }
+  }
+
+  // Header row 1: two merged cells (record columns / remarks column).
+  page.drawRectangle({ x: colXs[0], y: cy - headerRow1H, width: colXs[3] - colXs[0], height: headerRow1H, borderColor: black, borderWidth: 0.75 })
+  page.drawRectangle({ x: colXs[3], y: cy - headerRow1H, width: colXs[4] - colXs[3], height: headerRow1H, borderColor: black, borderWidth: 0.75 })
+  drawCenteredText(page, font, 'บันทึกเวลาปฏิบัติงาน (ยกเว้น เสาร์-อาทิตย์ และวันหยุดนักขัตฤกษ์)', colXs[0], colXs[3], cy - headerRow1H + 4.5, 7.5, black)
+  drawCenteredText(page, font, 'หมายเหตุ', colXs[3], colXs[4], cy - headerRow1H + 4.5, 8, black)
+  cy -= headerRow1H
+
+  // Header row 2: column labels.
+  drawGridRow(headerRow2H, 0.75)
+  drawCenteredText(page, font, 'วันที่', colXs[0], colXs[1], cy - headerRow2H + 4, 7.5, black)
+  drawCenteredText(page, font, 'เวลาเข้า', colXs[1], colXs[2], cy - headerRow2H + 4, 7.5, black)
+  drawCenteredText(page, font, 'เวลาออก', colXs[2], colXs[3], cy - headerRow2H + 4, 7.5, black)
+  drawCenteredText(page, font, '(เช่น Office, Work from Home เป็นต้น)', colXs[3], colXs[4], cy - headerRow2H + 4, 6.5, black)
+  cy -= headerRow2H
+
+  for (const row of opts.rows) {
+    drawGridRow(rowH, 0.5)
+    const textY = cy - rowH / 2 - 2.8
+    const fs = Math.min(8, Math.max(5, rowH - 4))
+    drawCenteredText(page, font, String(row.day), colXs[0], colXs[1], textY, fs, black)
+    drawCenteredText(page, font, row.timeIn, colXs[1], colXs[2], textY, fs, black)
+    drawCenteredText(page, font, row.timeOut, colXs[2], colXs[3], textY, fs, black)
+    drawCenteredText(page, font, row.remark, colXs[3], colXs[4], textY, fs, black)
+    cy -= rowH
+  }
+
+  y = cy - 26
+  page.drawText('พนักงานลงชื่อ', { x: margin, y, size: 9, font, color: black })
+  page.drawText('ผู้ขอลงเวลา', { x: margin + 220, y, size: 9, font, color: black })
+  y -= 22
+  page.drawText(`( ${opts.name || '.....................................'} )`, { x: margin + 20, y, size: 9, font, color: black })
+  y -= 24
+  page.drawText('ผู้รับรอง (ระดับ 8,9)', { x: margin, y, size: 9, font, color: black })
+  y -= 22
+  page.drawText(`( ${opts.approverName || '.....................................'} )`, { x: margin + 20, y, size: 9, font, color: black })
 
   return doc.save()
 }

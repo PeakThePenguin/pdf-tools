@@ -22,6 +22,7 @@ import {
   Hash,
   Shield,
   Signature,
+  CalendarClock,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -54,6 +55,7 @@ const TOOLS: Tool[] = [
   { href: '/watermark-image', icon: Droplets, title: 'Add watermark to Image', desc: 'Stamp a diagonal text watermark on a JPG, PNG, or GIF.', color: '#7C3AED' },
   { href: '/page-numbers', icon: Hash, title: 'Add page numbers', desc: 'Number every page, choose position & start.', color: '#4F46E5' },
   { href: '/remove-metadata', icon: Shield, title: 'Remove metadata', desc: 'Strip title, author, and other hidden info.', color: '#475569' },
+  { href: '/timesheet', icon: CalendarClock, title: 'Time Attendance Form', desc: 'Generate the PC Team 4 monthly time record.', color: '#0D9488' },
 ]
 
 export default function PdfToolsPage() {
