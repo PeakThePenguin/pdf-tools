@@ -24,6 +24,7 @@ import {
   Signature,
   CalendarClock,
   TableProperties,
+  PlaneTakeoff,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -58,6 +59,7 @@ const TOOLS: Tool[] = [
   { href: '/remove-metadata', icon: Shield, title: 'Remove metadata', desc: 'Strip title, author, and other hidden info.', color: '#475569' },
   { href: '/timesheet', icon: CalendarClock, title: 'Time Attendance Form', desc: 'Generate the PC Team 4 monthly time record.', color: '#0D9488' },
   { href: '/transpose-table', icon: TableProperties, title: 'Transpose table', desc: 'Swap a table’s rows and columns.', color: '#0EA5E9' },
+  { href: '/roster-to-jpg', icon: PlaneTakeoff, title: 'Roster to JPG', desc: 'Turn a Crew Schedule Slip into a daily-view image.', color: '#7C3AED' },
 ]
 
 export default function PdfToolsPage() {
