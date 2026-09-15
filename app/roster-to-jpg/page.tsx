@@ -4,27 +4,30 @@ import { useState } from 'react'
 import ToolShell from '@/app/components/ToolShell'
 import FileDrop from '@/app/components/FileDrop'
 import { downloadBlob } from '@/app/lib/engine'
-import { parseCrewScheduleSlip, renderRosterToJpeg } from '@/app/lib/roster'
+import { parseCrewScheduleSlip, renderRosterToJpeg, rosterToIcs } from '@/app/lib/roster'
 
 export default function RosterToJpgPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
-  const [fileName, setFileName] = useState('roster.jpg')
+  const [ics, setIcs] = useState<string | null>(null)
+  const [baseName, setBaseName] = useState('roster')
 
   async function handleFile(file: File) {
     setBusy(true)
     setError(null)
     setPreviewUrl(null)
     setBlob(null)
+    setIcs(null)
     try {
       const bytes = await file.arrayBuffer()
       const roster = await parseCrewScheduleSlip(bytes)
       const jpgBlob = await renderRosterToJpeg(roster)
       setBlob(jpgBlob)
       setPreviewUrl(URL.createObjectURL(jpgBlob))
-      setFileName(`${file.name.replace(/\.pdf$/i, '') || 'roster'}.jpg`)
+      setIcs(rosterToIcs(roster) || null)
+      setBaseName(file.name.replace(/\.pdf$/i, '') || 'roster')
     } catch (e) {
       setError((e as Error).message || 'Failed to convert this PDF.')
     } finally {
@@ -32,8 +35,11 @@ export default function RosterToJpgPage() {
     }
   }
 
-  function handleDownload() {
-    if (blob) downloadBlob(blob, fileName)
+  function handleDownloadJpg() {
+    if (blob) downloadBlob(blob, `${baseName}.jpg`)
+  }
+  function handleDownloadIcs() {
+    if (ics) downloadBlob(new Blob([ics], { type: 'text/calendar;charset=utf-8' }), `${baseName}.ics`)
   }
 
   return (
@@ -51,12 +57,21 @@ export default function RosterToJpgPage() {
               <img src={previewUrl} alt="Converted roster preview" style={{ width: '100%', display: 'block' }} />
             </div>
             <button
-              onClick={handleDownload}
+              onClick={handleDownloadJpg}
               className="w-full py-3 font-bold text-sm text-white"
               style={{ background: 'var(--purple)', borderRadius: 4 }}
             >
               Download JPG
             </button>
+            {ics && (
+              <button
+                onClick={handleDownloadIcs}
+                className="w-full py-3 font-bold text-sm"
+                style={{ border: '1px solid var(--purple)', color: 'var(--purple)', borderRadius: 4 }}
+              >
+                Download .ics
+              </button>
+            )}
           </>
         )}
       </div>

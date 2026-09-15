@@ -28,6 +28,8 @@ export interface RosterHeader {
   effective: string
   sysdate: string
   title: string // e.g. "September2026", derived from EFFECTIVE
+  year: number | null // parsed from EFFECTIVE's end date, for building real calendar dates
+  month: number | null // 1-12
 }
 
 export interface RosterDayEntry {
@@ -45,12 +47,28 @@ const MONTH_NAMES: Record<string, string> = {
   jan: 'January', feb: 'February', mar: 'March', apr: 'April', may: 'May', jun: 'June',
   jul: 'July', aug: 'August', sep: 'September', oct: 'October', nov: 'November', dec: 'December',
 }
+const MONTH_NUMBERS: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+}
+
+/** Parse EFFECTIVE's end date ("01Sep26-30Sep26" -> the 30Sep26 half). */
+function parseEffectiveEnd(effective: string): { monthAbbr: string; year: number } | null {
+  const m = effective.match(/\d{2}[A-Za-z]{3}\d{2}\s*-\s*\d{2}([A-Za-z]{3})(\d{2})/)
+  if (!m) return null
+  return { monthAbbr: m[1].toLowerCase(), year: 2000 + parseInt(m[2], 10) }
+}
 
 function titleFromEffective(effective: string): string {
-  const m = effective.match(/(\d{2})([A-Za-z]{3})(\d{2})\s*-\s*\d{2}([A-Za-z]{3})(\d{2})/)
-  if (!m) return effective
-  const month = MONTH_NAMES[m[4].toLowerCase()] ?? m[4]
-  return `${month}20${m[5]}`
+  const end = parseEffectiveEnd(effective)
+  if (!end) return effective
+  const month = MONTH_NAMES[end.monthAbbr] ?? end.monthAbbr
+  return `${month}${end.year}`
+}
+
+function monthNumberFromEffective(effective: string): number | null {
+  const end = parseEffectiveEnd(effective)
+  if (!end) return null
+  return MONTH_NUMBERS[end.monthAbbr] ?? null
 }
 
 async function extractPageItems(doc: Awaited<ReturnType<typeof loadPdfJsDocument>>, pageNumber: number): Promise<TextItem[]> {
@@ -273,8 +291,14 @@ export async function parseCrewScheduleSlip(bytes: ArrayBuffer): Promise<RosterD
     throw new Error('Could not find a day-by-day schedule grid in this PDF. Is it a Crew Schedule Slip?')
   }
 
+  const end = parseEffectiveEnd(effective)
   return {
-    header: { persNoLine, acQual, rank, effective, sysdate, title: titleFromEffective(effective) },
+    header: {
+      persNoLine, acQual, rank, effective, sysdate,
+      title: titleFromEffective(effective),
+      year: end?.year ?? null,
+      month: monthNumberFromEffective(effective),
+    },
     days,
   }
 }
@@ -412,4 +436,55 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error(`Failed to load ${src}`))
     img.src = src
   })
+}
+
+// ── Exporting the parsed roster to an .ics calendar ──────────────────
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+function icsEscape(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+}
+
+function icsDate(year: number, month: number, day: number): string {
+  return `${year}${pad2(month)}${pad2(day)}`
+}
+
+/** Next calendar day, handling month/year rollover (e.g. day 30 of a 30-day month). */
+function nextDay(year: number, month: number, day: number): { year: number; month: number; day: number } {
+  const d = new Date(Date.UTC(year, month - 1, day + 1))
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() }
+}
+
+/**
+ * Build an .ics calendar from the parsed roster: one all-day event per day
+ * that has a duty, so it drops straight onto the day cell in any calendar
+ * app. Times aren't modeled as event start/end — DEP/ARR times in the
+ * source are local to each station, and a leg's arrival can land on the
+ * next day's own column, so an all-day marker per day avoids guessing at a
+ * single timezone/duration that wouldn't be reliably correct anyway.
+ */
+export function rosterToIcs(data: RosterData): string {
+  const { year, month } = data.header
+  if (!year || !month) return ''
+
+  const stamp = new Date()
+  const dtstamp = `${stamp.getUTCFullYear()}${pad2(stamp.getUTCMonth() + 1)}${pad2(stamp.getUTCDate())}T${pad2(stamp.getUTCHours())}${pad2(stamp.getUTCMinutes())}${pad2(stamp.getUTCSeconds())}Z`
+
+  const lines: string[] = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PC Team 4 PDF Tools//Roster to JPG//EN', 'CALSCALE:GREGORIAN']
+  for (const d of data.days) {
+    if (!d.text) continue
+    const end = nextDay(year, month, d.day)
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:roster-${icsDate(year, month, d.day)}-${Math.random().toString(36).slice(2, 8)}@pdf-tools`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${icsDate(year, month, d.day)}`,
+      `DTEND;VALUE=DATE:${icsDate(end.year, end.month, end.day)}`,
+      `SUMMARY:${icsEscape(d.text)}`,
+      'END:VEVENT'
+    )
+  }
+  lines.push('END:VCALENDAR')
+  return lines.join('\r\n') + '\r\n'
 }
