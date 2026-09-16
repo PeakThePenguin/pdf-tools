@@ -36,6 +36,7 @@ export interface RosterDayEntry {
   day: number
   weekday: string // 'Mon' .. 'Sun'
   text: string
+  legs: Leg[]
 }
 
 export interface RosterData {
@@ -102,12 +103,12 @@ function findHeaderField(items: TextItem[], label: string): string {
 const isTime = (s: string) => /^\d{2}:\d{2}$/.test(s)
 const mid = (a: number, b: number) => (a + b) / 2
 
-interface LegZone {
+export interface LegZone {
   code: string | null
   station: string | null
   time: string | null
 }
-interface Leg {
+export interface Leg {
   dep: LegZone
   arr: { station: string | null; time: string | null }
 }
@@ -222,7 +223,7 @@ function parseDayColumns(items: TextItem[]): RosterDayEntry[] {
     const dayNum = parseInt(h.str, 10)
     const weekdayAbbr = h.str.replace(/^\d+/, '')
     const weekday = weekdayAbbr.charAt(0) + weekdayAbbr.slice(1).toLowerCase()
-    days.push({ day: dayNum, weekday, text: formatDay(legs) })
+    days.push({ day: dayNum, weekday, text: formatDay(legs), legs })
   }
   return days
 }
@@ -456,35 +457,122 @@ function nextDay(year: number, month: number, day: number): { year: number; mont
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() }
 }
 
+interface CalendarMoment {
+  year: number
+  month: number
+  day: number
+  time: string // 'HH:MM', ignored when allDay
+}
+interface CalendarEvent {
+  summary: string
+  start: CalendarMoment
+  end: CalendarMoment
+  allDay: boolean
+}
+
 /**
- * Build an .ics calendar from the parsed roster: one all-day event per day
- * that has a duty, so it drops straight onto the day cell in any calendar
- * app. Times aren't modeled as event start/end — DEP/ARR times in the
- * source are local to each station, and a leg's arrival can land on the
- * next day's own column, so an all-day marker per day avoids guessing at a
- * single timezone/duration that wouldn't be reliably correct anyway.
+ * Reduce the parsed per-day legs into actual timed events. A leg whose
+ * arrival isn't resolved on its own departure day (a flight that lands
+ * after midnight) shows up as two separate day-entries in the source grid
+ * — a "pending" departure-only entry, then an "arrival-only" entry on a
+ * later day — so those are paired back into one continuous event here.
+ * Times are kept as the source's own local wall-clock values (DEP/ARR are
+ * each local to their own station already) rather than converted to a
+ * single timezone, matching what the slip itself shows.
+ */
+function buildCalendarEvents(data: RosterData): CalendarEvent[] {
+  const { year, month } = data.header
+  if (!year || !month) return []
+
+  const events: CalendarEvent[] = []
+  const pending: { code: string; day: number; time: string; label: string }[] = []
+
+  for (const d of data.days) {
+    for (const leg of d.legs) {
+      const { code, station: depStation, time: depTime } = leg.dep
+      const { station: arrStation, time: arrTime } = leg.arr
+
+      if (code && !depStation && !arrStation && depTime && arrTime) {
+        // Ground duty (GRD/TRG/…): same-day timed block, or an all-day
+        // marker for the generic 00:00-23:59 "whole day" span (HOL).
+        if (depTime === '00:00' && arrTime === '23:59') {
+          events.push({ summary: code, start: { year, month, day: d.day, time: '00:00' }, end: { year, month, day: d.day, time: '00:00' }, allDay: true })
+        } else {
+          events.push({
+            summary: `${code} ${compact(depTime)}-${compact(arrTime)}`,
+            start: { year, month, day: d.day, time: depTime },
+            end: { year, month, day: d.day, time: arrTime },
+            allDay: false,
+          })
+        }
+        continue
+      }
+
+      if (code && arrStation && depTime && arrTime) {
+        // Resolved within the same day (including a closed-loop BKK-BKK duty).
+        events.push({ summary: formatLeg(leg), start: { year, month, day: d.day, time: depTime }, end: { year, month, day: d.day, time: arrTime }, allDay: false })
+        continue
+      }
+
+      if (code && depTime && !arrStation) {
+        // Departs but doesn't land until a later day's column.
+        pending.push({ code, day: d.day, time: depTime, label: formatLeg(leg) })
+        continue
+      }
+
+      if (!code && arrStation && arrTime) {
+        // Arrival-only continuation — resolves the oldest pending departure.
+        const dep = pending.shift()
+        if (dep) {
+          events.push({
+            summary: `${dep.label}   ${arrStation}(${compact(arrTime)})`,
+            start: { year, month, day: dep.day, time: dep.time },
+            end: { year, month, day: d.day, time: arrTime },
+            allDay: false,
+          })
+        } else {
+          // No matching departure in range (roster starts mid-flight).
+          events.push({ summary: `${arrStation}(${compact(arrTime)})`, start: { year, month, day: d.day, time: arrTime }, end: { year, month, day: d.day, time: arrTime }, allDay: false })
+        }
+      }
+    }
+  }
+  // A departure with no arrival anywhere in the roster's date range (flight
+  // lands after the slip's last day) — keep it as a departure-only marker.
+  for (const dep of pending) {
+    events.push({ summary: dep.label, start: { year, month, day: dep.day, time: dep.time }, end: { year, month, day: dep.day, time: dep.time }, allDay: false })
+  }
+  return events
+}
+
+function icsDateTime(m: CalendarMoment): string {
+  return `${icsDate(m.year, m.month, m.day)}T${m.time.replace(':', '')}00`
+}
+
+/**
+ * Build an .ics calendar from the parsed roster, one VEVENT per duty —
+ * timed to the slip's own local DEP/ARR clock times where available (a
+ * flight landing after midnight becomes one event spanning into the next
+ * day), and an all-day marker for whole-day entries like HOL.
  */
 export function rosterToIcs(data: RosterData): string {
-  const { year, month } = data.header
-  if (!year || !month) return ''
+  const events = buildCalendarEvents(data)
+  if (events.length === 0) return ''
 
   const stamp = new Date()
   const dtstamp = `${stamp.getUTCFullYear()}${pad2(stamp.getUTCMonth() + 1)}${pad2(stamp.getUTCDate())}T${pad2(stamp.getUTCHours())}${pad2(stamp.getUTCMinutes())}${pad2(stamp.getUTCSeconds())}Z`
 
   const lines: string[] = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PC Team 4 PDF Tools//Roster to JPG//EN', 'CALSCALE:GREGORIAN']
-  for (const d of data.days) {
-    if (!d.text) continue
-    const end = nextDay(year, month, d.day)
-    lines.push(
-      'BEGIN:VEVENT',
-      `UID:roster-${icsDate(year, month, d.day)}-${Math.random().toString(36).slice(2, 8)}@pdf-tools`,
-      `DTSTAMP:${dtstamp}`,
-      `DTSTART;VALUE=DATE:${icsDate(year, month, d.day)}`,
-      `DTEND;VALUE=DATE:${icsDate(end.year, end.month, end.day)}`,
-      `SUMMARY:${icsEscape(d.text)}`,
-      'END:VEVENT'
-    )
-  }
+  events.forEach((ev, i) => {
+    lines.push('BEGIN:VEVENT', `UID:roster-${icsDate(ev.start.year, ev.start.month, ev.start.day)}-${i}-${Math.random().toString(36).slice(2, 8)}@pdf-tools`, `DTSTAMP:${dtstamp}`)
+    if (ev.allDay) {
+      const end = nextDay(ev.end.year, ev.end.month, ev.end.day)
+      lines.push(`DTSTART;VALUE=DATE:${icsDate(ev.start.year, ev.start.month, ev.start.day)}`, `DTEND;VALUE=DATE:${icsDate(end.year, end.month, end.day)}`)
+    } else {
+      lines.push(`DTSTART:${icsDateTime(ev.start)}`, `DTEND:${icsDateTime(ev.end)}`)
+    }
+    lines.push(`SUMMARY:${icsEscape(ev.summary)}`, 'END:VEVENT')
+  })
   lines.push('END:VCALENDAR')
   return lines.join('\r\n') + '\r\n'
 }
