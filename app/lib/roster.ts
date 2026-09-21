@@ -9,9 +9,11 @@
 // reconstructed purely from glyph positions: day columns from the header
 // row's x-positions, row-groups from the DUTY/FLT/DEP/ARR label y-positions.
 // See the parsing notes inline — the trickiest part is that the DUTY cell
-// stacks a variable number of "code + arrival station" summary lines (one
-// per duty that day) directly above leg 1's own content, with no reliable
-// gap to tell them apart when 2 duties land the same day.
+// stacks a variable number of summary lines (one duty's worth each, 2 lines
+// for a flight, 3 for a timed ground duty like TRG) directly above leg 1's
+// own content, in the same y-band. They're told apart by the y-gap between
+// the bottom of that summary stack and leg 1's own lines, which is reliably
+// wider than the tight line-to-line spacing within either block.
 
 import { loadPdfJsDocument } from './pdfjs'
 
@@ -201,17 +203,9 @@ function parseDayColumns(items: TextItem[]): RosterDayEntry[] {
       const arrLines = itemsInBand(xLeft, xRight, legBands[leg].arr[0], legBands[leg].arr[1]).map((it) => it.str)
       rawLegs[leg] = { depLines, arrLines }
     }
-    const otherActiveLegs = rawLegs.slice(1).filter((l) => l.depLines.length || l.arrLines.length).length
-
-    let leg1DepLines: string[]
-    if (otherActiveLegs === 0) {
-      leg1DepLines = trimToBottomCluster(itemsInBand(xLeft, xRight, legBands[0].dep[0], legBands[0].dep[1])).map((it) => it.str)
-    } else {
-      const skip = 2 * (otherActiveLegs + 1)
-      leg1DepLines = itemsInBand(xLeft, xRight, legBands[0].dep[0], legBands[0].dep[1])
-        .slice(skip)
-        .map((it) => it.str)
-    }
+    const leg1DepLines: string[] = trimToBottomCluster(
+      itemsInBand(xLeft, xRight, legBands[0].dep[0], legBands[0].dep[1])
+    ).map((it) => it.str)
     rawLegs[0] = {
       depLines: leg1DepLines,
       arrLines: itemsInBand(xLeft, xRight, legBands[0].arr[0], legBands[0].arr[1]).map((it) => it.str),
