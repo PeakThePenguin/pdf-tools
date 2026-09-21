@@ -244,7 +244,8 @@ function compact(t: string): string {
  *  - a real flight departing to an outstation shows only the departure
  *    time: "CODE(dep)   STATION";
  *  - a flight whose arrival isn't resolved yet (continues past midnight
- *    into the next day's column) shows just the bare code;
+ *    into the next day's column) shows "CODE(dep)" when a departure time
+ *    was captured, else just the bare code;
  *  - a day that's purely an overnight arrival (no new duty that day) shows
  *    just "STATION(arr)";
  *  - a no-station ground duty (training, standby, etc.) shows
@@ -267,6 +268,7 @@ function formatLeg(leg: Leg): string {
     if (arrStation === 'BKK') return `${label}   ${arrStation}(${compact(arrTime ?? '')})`
     return `${label}(${compact(depTime ?? '')})   ${arrStation}`
   }
+  if (code && depTime) return `${formatCode(code)}(${compact(depTime)})`
   if (code) return formatCode(code)
   if (arrStation) return `${arrStation}(${compact(arrTime ?? '')})`
   return ''
