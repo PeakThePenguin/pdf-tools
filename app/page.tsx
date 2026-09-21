@@ -26,6 +26,7 @@ import {
   TableProperties,
   PlaneTakeoff,
   QrCode,
+  Crop,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -62,6 +63,7 @@ const TOOLS: Tool[] = [
   { href: '/transpose-table', icon: TableProperties, title: 'Transpose table', desc: 'Swap a table’s rows and columns.', color: '#0EA5E9' },
   { href: '/roster-to-jpg', icon: PlaneTakeoff, title: 'Roster to JPG', desc: 'Turn a Crew Schedule Slip into a daily-view image.', color: '#7C3AED' },
   { href: '/qr-code', icon: QrCode, title: 'QR Code', desc: 'Create a QR code from text or a link.', color: '#111827' },
+  { href: '/crop-pdf', icon: Crop, title: 'Crop PDF', desc: 'Drag a box to crop every page.', color: '#EF4444' },
 ]
 
 export default function PdfToolsPage() {

@@ -104,6 +104,33 @@ export async function rotateAllPages(bytes: ArrayBuffer, by: number): Promise<Ui
   return doc.save()
 }
 
+export interface CropRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/**
+ * Crop pages to the given rectangles, in each page's own raw (unrotated)
+ * PDF coordinate space — the caller is responsible for converting a
+ * user-drawn box on a rendered (rotation-aware) preview into that space,
+ * e.g. via pdfjs's PageViewport.convertToPdfPoint. Both /MediaBox and
+ * /CropBox are set to the same rectangle so the crop holds even in
+ * viewers or printers that only honor MediaBox.
+ */
+export async function cropPdf(bytes: ArrayBuffer, crops: { pageIndex: number; rect: CropRect }[]): Promise<Uint8Array> {
+  const doc = await loadPdf(bytes)
+  const pages = doc.getPages()
+  for (const { pageIndex, rect } of crops) {
+    const page = pages[pageIndex]
+    if (!page) continue
+    page.setMediaBox(rect.x, rect.y, rect.width, rect.height)
+    page.setCropBox(rect.x, rect.y, rect.width, rect.height)
+  }
+  return doc.save()
+}
+
 export async function reversePages(bytes: ArrayBuffer): Promise<Uint8Array> {
   const src = await loadPdf(bytes)
   const total = src.getPageCount()
