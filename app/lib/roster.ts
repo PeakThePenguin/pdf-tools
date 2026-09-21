@@ -169,6 +169,11 @@ function parseDayColumns(items: TextItem[]): RosterDayEntry[] {
     if (rest.length && isTime(rest[rest.length - 1])) {
       time = rest[rest.length - 1]
       rest = rest.slice(0, -1)
+    } else if (rest.length === 1 && /^\*+$/.test(rest[0])) {
+      // "*****"-style marker: the source slip stamps this on the day
+      // *before* a flight whose departure time is 00:00-02:00, flagging
+      // that report time falls the previous evening. Pass it through as-is.
+      return { code: rest[0], station: null, time: null }
     } else if (rest.length) {
       // A real dep-zone always ends in a time; anything else is DUTY-cell
       // leftover (e.g. a lone arrival-station line with no new duty that day).
