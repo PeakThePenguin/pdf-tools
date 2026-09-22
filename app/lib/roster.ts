@@ -311,8 +311,8 @@ const SCALE = 2 // supersample for crisp text in the exported JPG
 const WIDTH = 760
 const MARGIN = 24
 const DATE_COL_WIDTH = 110
-const ROW_HEIGHT = 32
-const TABLE_HEADER_HEIGHT = 28
+const ROW_HEIGHT = 38
+const TABLE_HEADER_HEIGHT = 30
 const PURPLE = '#6B2D8B'
 const WEEKEND_TINT = '#FDE7F0'
 const STRIPE_TINT = '#EAF2FB'
@@ -380,7 +380,7 @@ export async function renderRosterToJpeg(data: RosterData): Promise<Blob> {
   ctx.fillStyle = PURPLE
   ctx.fillRect(left, y, right - left, TABLE_HEADER_HEIGHT)
   ctx.fillStyle = '#ffffff'
-  ctx.font = '700 11px Arial, sans-serif'
+  ctx.font = '700 12px Arial, sans-serif'
   ctx.textAlign = 'center'
   ctx.fillText('Date', left + DATE_COL_WIDTH / 2, y + TABLE_HEADER_HEIGHT / 2 + 4)
   ctx.fillText(data.header.title, (dateColRight + right) / 2, y + TABLE_HEADER_HEIGHT / 2 + 4)
@@ -393,18 +393,18 @@ export async function renderRosterToJpeg(data: RosterData): Promise<Blob> {
     ctx.fillRect(left, rowTop, right - left, ROW_HEIGHT)
 
     ctx.fillStyle = '#111827'
-    ctx.font = '700 13px Arial, sans-serif'
-    ctx.fillText(String(d.day), left + 12, rowTop + ROW_HEIGHT / 2 + 5)
+    ctx.font = '700 16px Arial, sans-serif'
+    ctx.fillText(String(d.day), left + 12, rowTop + ROW_HEIGHT / 2 + 6)
     const dayW = ctx.measureText(String(d.day)).width
-    ctx.font = '400 10px Arial, sans-serif'
+    ctx.font = '400 12px Arial, sans-serif'
     ctx.fillStyle = '#9ca3af'
-    ctx.fillText(d.weekday, left + 12 + dayW + 6, rowTop + ROW_HEIGHT / 2 + 4)
+    ctx.fillText(d.weekday, left + 12 + dayW + 6, rowTop + ROW_HEIGHT / 2 + 5)
 
     if (d.text) {
       ctx.fillStyle = '#111827'
-      ctx.font = '400 11px Arial, sans-serif'
+      ctx.font = '400 14px Arial, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText(d.text, (dateColRight + right) / 2, rowTop + ROW_HEIGHT / 2 + 4, right - dateColRight - 12)
+      ctx.fillText(d.text, (dateColRight + right) / 2, rowTop + ROW_HEIGHT / 2 + 5, right - dateColRight - 12)
       ctx.textAlign = 'left'
     }
     y += ROW_HEIGHT
