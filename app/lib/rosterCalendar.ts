@@ -156,6 +156,25 @@ interface Run {
   color: [number, number, number]
 }
 
+/**
+ * A leading/trailing week-row shows the adjacent month's day numbers too,
+ * faded to a light gray (unlike the bold dark-navy digits of the roster's
+ * own month) — and since those numbers can coincide with real day numbers
+ * in-range (e.g. "28" leaking in before day 1 of a 31-day month), an
+ * upper-bound check on the OCR'd value alone can't tell them apart. This
+ * checks the pixel color directly: real day numbers always have at least
+ * one genuinely dark pixel; faded ones don't.
+ */
+function hasDarkText(data: Uint8ClampedArray, W: number, rect: { left: number; top: number; width: number; height: number }): boolean {
+  for (let y = rect.top; y < rect.top + rect.height; y++) {
+    for (let x = rect.left; x < rect.left + rect.width; x++) {
+      const i = (y * W + x) * 4
+      if (data[i] + data[i + 1] + data[i + 2] < 300) return true
+    }
+  }
+  return false
+}
+
 /** Contiguous non-background runs along one horizontal probe line — one run per duty badge in the cell. */
 function findRuns(data: Uint8ClampedArray, W: number, xStart: number, xEnd: number, y: number, minWidth: number): Run[] {
   const raw: { start: number; end: number }[] = []
@@ -232,17 +251,26 @@ async function ocrRegion(worker: Worker, source: HTMLCanvasElement, rect: Rect, 
   if (rect.width < 4 || rect.height < 4) return ''
   const crop = cropRegion(source, rect)
   preprocessForOcr(crop)
-  await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE, tessedit_char_whitelist: whitelist })
-  const { data } = await worker.recognize(crop)
-  const text = (data.text || '').trim()
-  if (text) return text
 
-  // SINGLE_LINE occasionally comes back empty on a short, isolated token
-  // (e.g. a lone day-number digit) that SINGLE_WORD reads fine — cheap to
-  // retry since it only fires on an empty result.
-  await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_WORD, tessedit_char_whitelist: whitelist })
-  const retry = await worker.recognize(crop)
-  return (retry.data.text || '').trim()
+  for (const psm of [PSM.SINGLE_LINE, PSM.SINGLE_WORD, PSM.SINGLE_CHAR]) {
+    await worker.setParameters({ tessedit_pageseg_mode: psm, tessedit_char_whitelist: whitelist })
+    const { data } = await worker.recognize(crop)
+    const text = (data.text || '').trim()
+    if (text) return text
+  }
+
+  // A whitelist measurably increases zero-confidence rejections on short,
+  // isolated tokens (verified on a lone "9" day-number that read fine
+  // unrestricted but came back empty whitelisted to digits under every PSM
+  // mode above) — but dropping it outright regressed *other* cells (it
+  // trades that rare full rejection for a higher misread rate), so it's
+  // only tried as a last resort once every whitelisted attempt is empty.
+  if (whitelist) {
+    await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE, tessedit_char_whitelist: '' })
+    const { data } = await worker.recognize(crop)
+    return (data.text || '').trim()
+  }
+  return ''
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -328,6 +356,7 @@ export async function parseRosterCalendarScreenshot(file: File | Blob, onProgres
           width: Math.round(colW * 0.46),
           height: Math.round(rowH * 0.32),
         }
+        if (!hasDarkText(buf, W, dayRect)) continue // faded adjacent-month day number
         const dayText = await ocrRegion(worker, canvas, dayRect, '0123456789')
         const day = parseInt(dayText.replace(/[^0-9]/g, ''), 10)
         if (!day || day < 1 || day > daysInMonth) continue
