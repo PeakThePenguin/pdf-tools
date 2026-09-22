@@ -550,11 +550,36 @@ function icsDateTime(m: CalendarMoment): string {
   return `${icsDate(m.year, m.month, m.day)}T${m.time.replace(':', '')}00`
 }
 
+// Bangkok has kept a fixed UTC+7 offset with no DST for decades, so a single
+// STANDARD sub-component is a fully correct VTIMEZONE — no historical
+// transitions to model.
+const VTIMEZONE_BANGKOK = [
+  'BEGIN:VTIMEZONE',
+  'TZID:Asia/Bangkok',
+  'BEGIN:STANDARD',
+  'DTSTART:19700101T000000',
+  'TZOFFSETFROM:+0700',
+  'TZOFFSETTO:+0700',
+  'TZNAME:+07',
+  'END:STANDARD',
+  'END:VTIMEZONE',
+]
+
 /**
  * Build an .ics calendar from the parsed roster, one VEVENT per duty —
  * timed to the slip's own local DEP/ARR clock times where available (a
  * flight landing after midnight becomes one event spanning into the next
  * day), and an all-day marker for whole-day entries like HOL.
+ *
+ * Timed events carry an explicit TZID=Asia/Bangkok rather than a bare
+ * (“floating”) DATE-TIME. Floating time is technically correct for values
+ * that aren't really anchored to one zone (see buildCalendarEvents' own
+ * doc comment), but several real calendar apps — Samsung Calendar among
+ * them — don't honor it and instead assume the bare value is UTC, shifting
+ * every event by the local UTC offset and occasionally rolling it onto the
+ * wrong day. Tagging it Asia/Bangkok keeps the printed wall-clock digits
+ * unchanged (matching what the slip shows) while giving those apps a
+ * concrete zone to anchor to instead of guessing UTC.
  */
 export function rosterToIcs(data: RosterData): string {
   const events = buildCalendarEvents(data)
@@ -563,14 +588,14 @@ export function rosterToIcs(data: RosterData): string {
   const stamp = new Date()
   const dtstamp = `${stamp.getUTCFullYear()}${pad2(stamp.getUTCMonth() + 1)}${pad2(stamp.getUTCDate())}T${pad2(stamp.getUTCHours())}${pad2(stamp.getUTCMinutes())}${pad2(stamp.getUTCSeconds())}Z`
 
-  const lines: string[] = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PC Team 4 PDF Tools//Roster to JPG//EN', 'CALSCALE:GREGORIAN']
+  const lines: string[] = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PC Team 4 PDF Tools//Roster to JPG//EN', 'CALSCALE:GREGORIAN', ...VTIMEZONE_BANGKOK]
   events.forEach((ev, i) => {
     lines.push('BEGIN:VEVENT', `UID:roster-${icsDate(ev.start.year, ev.start.month, ev.start.day)}-${i}-${Math.random().toString(36).slice(2, 8)}@pdf-tools`, `DTSTAMP:${dtstamp}`)
     if (ev.allDay) {
       const end = nextDay(ev.end.year, ev.end.month, ev.end.day)
       lines.push(`DTSTART;VALUE=DATE:${icsDate(ev.start.year, ev.start.month, ev.start.day)}`, `DTEND;VALUE=DATE:${icsDate(end.year, end.month, end.day)}`)
     } else {
-      lines.push(`DTSTART:${icsDateTime(ev.start)}`, `DTEND:${icsDateTime(ev.end)}`)
+      lines.push(`DTSTART;TZID=Asia/Bangkok:${icsDateTime(ev.start)}`, `DTEND;TZID=Asia/Bangkok:${icsDateTime(ev.end)}`)
     }
     lines.push(`SUMMARY:${icsEscape(ev.summary)}`, 'END:VEVENT')
   })
