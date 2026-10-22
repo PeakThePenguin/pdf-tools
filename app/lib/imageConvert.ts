@@ -157,9 +157,38 @@ async function convertPsd(file: File, quality: number): Promise<ConvertResult> {
 }
 
 async function convertHeic(file: File, quality: number): Promise<ConvertResult> {
-  const heic2any = (await import('heic2any')).default
-  const result = await heic2any({ blob: file, toType: 'image/jpeg', quality })
-  return { blob: Array.isArray(result) ? result[0] : result }
+  const libheif = await (await import('libheif-js/wasm-bundle')).default
+  const decoder = new libheif.HeifDecoder()
+  const buffer = await file.arrayBuffer()
+  const images = decoder.decode(buffer)
+  if (images.length === 0) throw new Error('Could not read any image out of this HEIC file.')
+
+  // A HEIC container can carry more than one image (a thumbnail alongside
+  // the full photo, a burst/Live Photo's frames) — the full-size one is
+  // whichever has the most pixels, not necessarily the first entry.
+  let image = images[0]
+  let bestArea = image.get_width() * image.get_height()
+  for (const img of images) {
+    const area = img.get_width() * img.get_height()
+    if (area > bestArea) {
+      image = img
+      bestArea = area
+    }
+  }
+
+  const width = image.get_width()
+  const height = image.get_height()
+  const imageData = { data: new Uint8ClampedArray(width * height * 4), width, height }
+  await new Promise<void>((resolve, reject) => {
+    image.display(imageData, (result) => (result ? resolve() : reject(new Error('Could not decode this HEIC file.'))))
+  })
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')!
+  ctx.putImageData(new ImageData(imageData.data, width, height), 0, 0)
+  return { blob: await canvasToJpeg(canvas, quality) }
 }
 
 async function convertRaw(file: File, quality: number): Promise<ConvertResult> {

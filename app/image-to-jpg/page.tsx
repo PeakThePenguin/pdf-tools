@@ -61,7 +61,10 @@ export default function ImageToJpgPage() {
             failed.push(`${f.name}: ${(e as Error).message || 'conversion failed'}`)
           }
         }
-        if (Object.keys(zip.files).length === 0) throw new Error('None of these files could be converted.')
+        if (Object.keys(zip.files).length === 0) {
+          setNotes(failed)
+          throw new Error('None of these files could be converted — see the reasons below.')
+        }
         setProgress('Zipping…')
         const zipBlob = await zip.generateAsync({ type: 'blob' })
         downloadBlob(zipBlob, `converted_jpg_${files.length}.zip`)
