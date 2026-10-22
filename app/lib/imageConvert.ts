@@ -156,39 +156,27 @@ async function convertPsd(file: File, quality: number): Promise<ConvertResult> {
   return { blob: await canvasToJpeg(canvas, quality), note: 'Flattened composite — layers not preserved.' }
 }
 
+/**
+ * heic-to bundles a current libheif, which reads photos from recent iPhones
+ * (HDR / 10-bit) that heic2any's 2023-era libheif rejects outright — real
+ * iPhone photos failed to convert until this was added, heic2any's bundled
+ * decoder having no memory-growth override meant it also choked on a real
+ * photo's full decoded resolution. heic2any stays as a fallback.
+ */
 async function convertHeic(file: File, quality: number): Promise<ConvertResult> {
-  const libheif = await (await import('libheif-js/wasm-bundle')).default
-  const decoder = new libheif.HeifDecoder()
-  const buffer = await file.arrayBuffer()
-  const images = decoder.decode(buffer)
-  if (images.length === 0) throw new Error('Could not read any image out of this HEIC file.')
-
-  // A HEIC container can carry more than one image (a thumbnail alongside
-  // the full photo, a burst/Live Photo's frames) — the full-size one is
-  // whichever has the most pixels, not necessarily the first entry.
-  let image = images[0]
-  let bestArea = image.get_width() * image.get_height()
-  for (const img of images) {
-    const area = img.get_width() * img.get_height()
-    if (area > bestArea) {
-      image = img
-      bestArea = area
+  try {
+    const { heicTo } = await import('heic-to/next')
+    return { blob: await heicTo({ blob: file, type: 'image/jpeg', quality }) }
+  } catch (first) {
+    try {
+      const heic2any = (await import('heic2any')).default
+      const result = await heic2any({ blob: file, toType: 'image/jpeg', quality })
+      return { blob: Array.isArray(result) ? result[0] : result }
+    } catch (second) {
+      const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
+      throw new Error(`heic-to: ${msg(first)}; heic2any: ${msg(second)}`)
     }
   }
-
-  const width = image.get_width()
-  const height = image.get_height()
-  const imageData = { data: new Uint8ClampedArray(width * height * 4), width, height }
-  await new Promise<void>((resolve, reject) => {
-    image.display(imageData, (result) => (result ? resolve() : reject(new Error('Could not decode this HEIC file.'))))
-  })
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')!
-  ctx.putImageData(new ImageData(imageData.data, width, height), 0, 0)
-  return { blob: await canvasToJpeg(canvas, quality) }
 }
 
 async function convertRaw(file: File, quality: number): Promise<ConvertResult> {
