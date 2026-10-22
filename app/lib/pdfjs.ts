@@ -19,12 +19,25 @@ function getPdfJsLib(): Promise<PdfJsLib> {
   return libPromise
 }
 
-export async function loadPdfJsDocument(bytes: ArrayBuffer): Promise<PdfJsDocument> {
+export async function loadPdfJsDocument(bytes: ArrayBuffer, password?: string): Promise<PdfJsDocument> {
   const lib = await getPdfJsLib()
   // pdf.js detaches/transfers the buffer — pass a fresh copy in case the
   // caller still needs the original ArrayBuffer.
-  const task = lib.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+  const task = lib.getDocument({ data: new Uint8Array(bytes.slice(0)), password })
   return task.promise
+}
+
+/**
+ * Whether a rejection from loadPdfJsDocument means the PDF needs a password
+ * (none given, or the one given was wrong) — pdf.js doesn't export the
+ * PasswordException class itself, only the PasswordResponses codes, so this
+ * checks the error's name the way pdf.js's own docs recommend.
+ */
+export function isPasswordError(error: unknown): { needed: true; wrongPassword: boolean } | { needed: false } {
+  if (!(error instanceof Error) || error.name !== 'PasswordException') return { needed: false }
+  // code 1 = NEED_PASSWORD (none supplied), code 2 = INCORRECT_PASSWORD
+  const code = (error as Error & { code?: number }).code
+  return { needed: true, wrongPassword: code === 2 }
 }
 
 export async function getPageCount(bytes: ArrayBuffer): Promise<number> {

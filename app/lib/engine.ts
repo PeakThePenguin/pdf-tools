@@ -1,4 +1,5 @@
 import { PDFDocument, PageSizes, StandardFonts, degrees, rgb, PDFName, PDFNumber, PDFRawStream, PDFFont, PDFImage, PDFPage } from 'pdf-lib'
+import { loadPdfJsDocument, renderPageBlob, isPasswordError } from './pdfjs'
 
 /** Load a PDFDocument from raw bytes, tolerating broken/encrypted metadata. */
 export async function loadPdf(bytes: ArrayBuffer | Uint8Array): Promise<PDFDocument> {
@@ -319,6 +320,50 @@ export async function removeMetadata(bytes: ArrayBuffer): Promise<Uint8Array> {
   doc.setProducer('')
   doc.setCreator('')
   return doc.save()
+}
+
+/**
+ * "Remove password" by rendering every page to an image and rebuilding a
+ * brand-new, unencrypted PDF from those — pdf-lib has no PDF decryption of
+ * its own (ignoreEncryption only tolerates a present-but-unreadable
+ * encryption dict enough to parse the rest of the file; it can't recover
+ * the real, encrypted page content), while pdf.js's rendering pipeline does
+ * implement real decryption once given the right password. The output is
+ * image-based — no more selectable text or copy-pasting — which is the
+ * necessary tradeoff for a client-side-only tool with no PDF crypto layer
+ * of its own.
+ */
+export async function removePdfPassword(
+  bytes: ArrayBuffer,
+  password?: string,
+  scale = 2,
+  onProgress?: (page: number, total: number) => void
+): Promise<Uint8Array> {
+  let doc
+  try {
+    doc = await loadPdfJsDocument(bytes, password)
+  } catch (e) {
+    const pw = isPasswordError(e)
+    if (pw.needed) {
+      throw new Error(pw.wrongPassword ? 'Incorrect password.' : 'This PDF needs a password to open it.')
+    }
+    throw e
+  }
+
+  const outDoc = await PDFDocument.create()
+  for (let i = 1; i <= doc.numPages; i++) {
+    onProgress?.(i, doc.numPages)
+    const page = await doc.getPage(i)
+    // The *original* page size (in points) — rendered pixels are supersampled
+    // at `scale` for crisp output, but the new page itself keeps the real size.
+    const { width, height } = page.getViewport({ scale: 1 })
+    const blob = await renderPageBlob(doc, i, scale, 'image/jpeg')
+    const img = await outDoc.embedJpg(new Uint8Array(await blob.arrayBuffer()))
+    const outPage = outDoc.addPage([width, height])
+    outPage.drawImage(img, { x: 0, y: 0, width, height })
+  }
+  doc.destroy()
+  return outDoc.save()
 }
 
 export interface CompressPdfResult {
